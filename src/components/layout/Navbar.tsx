@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Leaf, Package, Users, User, RefreshCw, Gift } from "lucide-react";
+import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/common/Logo";
 
@@ -28,6 +28,12 @@ export default function Navbar() {
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
               Reuse Ideas
+            </Link>
+            <Link 
+              to="/eco-map" 
+              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+            >
+              Eco Map
             </Link>
             <Link 
               to="/challenges" 

@@ -10,6 +10,7 @@ import ReuseIdeas from "./pages/ReuseIdeas";
 import Challenges from "./pages/Challenges";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
+import EcoMap from "./pages/EcoMap";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/reuse-ideas" element={<ReuseIdeas />} />
+          <Route path="/eco-map" element={<EcoMap />} />
           <Route path="/challenges" element={<Challenges />} />
           <Route path="/community" element={<Community />} />
           <Route path="/profile" element={<Profile />} />

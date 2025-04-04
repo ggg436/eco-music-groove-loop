@@ -1,14 +1,18 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, Lightbulb, PlayCircle, Bookmark } from "lucide-react";
+import { Upload, Lightbulb, PlayCircle, Bookmark, Plus } from "lucide-react";
 import ReuseIdeaCard from "@/components/reuse/ReuseIdeaCard";
+import VideoRecommendation from "@/components/reuse/VideoRecommendation";
+import LocationFeed from "@/components/eco/LocationFeed";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 export default function ReuseIdeas() {
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   
   // Sample reuse ideas
   const reuseIdeas = [
@@ -57,6 +61,74 @@ export default function ReuseIdeas() {
       videoUrl: "#"
     }
   ];
+
+  // Sample recommended videos
+  const recommendedVideos = [
+    {
+      id: 1,
+      title: "10 Creative Ways to Reuse Plastic Bottles",
+      creator: "EcoCreators",
+      thumbnail: "https://images.unsplash.com/photo-1582408921715-18e7806365c1",
+      duration: "8:42",
+      views: "256K",
+      videoId: "dQw4w9WgXcQ", // Example YouTube ID
+      category: "Plastic"
+    },
+    {
+      id: 2,
+      title: "Upcycle Old T-shirts into Reusable Bags - No Sewing Required!",
+      creator: "Sustainable Living",
+      thumbnail: "https://images.unsplash.com/photo-1624029769515-43a30d116de4",
+      duration: "12:28",
+      views: "124K",
+      videoId: "dQw4w9WgXcQ", // Example YouTube ID
+      category: "Textiles"
+    },
+    {
+      id: 3,
+      title: "Transform Glass Jars into Beautiful Home Decor",
+      creator: "Green DIY Projects",
+      thumbnail: "https://images.unsplash.com/photo-1550431241-a2b9d7ff574f",
+      duration: "15:16",
+      views: "87K",
+      videoId: "dQw4w9WgXcQ", // Example YouTube ID
+      category: "Glass"
+    },
+    {
+      id: 4,
+      title: "How to Build a Coffee Table from Wooden Pallets",
+      creator: "Upcycle Woodworks",
+      thumbnail: "https://images.unsplash.com/photo-1629041235862-83bd198bd227",
+      duration: "22:54",
+      views: "342K",
+      videoId: "dQw4w9WgXcQ", // Example YouTube ID
+      category: "Wood"
+    },
+    {
+      id: 5,
+      title: "Amazing Paper Craft Ideas - From Waste to Art",
+      creator: "Sustainable Crafts",
+      thumbnail: "https://images.unsplash.com/photo-1519682577862-22b62b24e493",
+      duration: "10:38",
+      views: "173K",
+      videoId: "dQw4w9WgXcQ", // Example YouTube ID
+      category: "Paper"
+    },
+    {
+      id: 6,
+      title: "5 Easy Eco-Friendly Crafts for Kids",
+      creator: "Green Family",
+      thumbnail: "https://images.unsplash.com/photo-1611280616506-b7f587ca46d1",
+      duration: "14:07",
+      views: "98K",
+      videoId: "dQw4w9WgXcQ", // Example YouTube ID
+      category: "Kids"
+    }
+  ];
+
+  const filteredVideos = selectedCategory === "all" 
+    ? recommendedVideos 
+    : recommendedVideos.filter(video => video.category === selectedCategory);
 
   return (
     <Layout>
@@ -128,6 +200,92 @@ export default function ReuseIdeas() {
           </CardContent>
         </Card>
         
+        {/* Video Recommendations and Location Feed */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">AI Video Recommendations</h3>
+              <div className="flex space-x-2 overflow-x-auto pb-2">
+                <Button 
+                  variant={selectedCategory === "all" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedCategory("all")}
+                >
+                  All
+                </Button>
+                <Button 
+                  variant={selectedCategory === "Plastic" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedCategory("Plastic")}
+                >
+                  Plastic
+                </Button>
+                <Button 
+                  variant={selectedCategory === "Glass" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedCategory("Glass")}
+                >
+                  Glass
+                </Button>
+                <Button 
+                  variant={selectedCategory === "Wood" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedCategory("Wood")}
+                >
+                  Wood
+                </Button>
+                <Button 
+                  variant={selectedCategory === "Textiles" ? "default" : "outline"} 
+                  size="sm"
+                  onClick={() => setSelectedCategory("Textiles")}
+                >
+                  Textiles
+                </Button>
+              </div>
+            </div>
+            
+            <Carousel className="mb-6">
+              <CarouselContent>
+                {filteredVideos.slice(0, 3).map((video) => (
+                  <CarouselItem key={video.id} className="md:basis-1/2 lg:basis-1/2">
+                    <VideoRecommendation
+                      title={video.title}
+                      creator={video.creator}
+                      thumbnail={video.thumbnail}
+                      duration={video.duration}
+                      views={video.views}
+                      videoId={video.videoId}
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <div className="flex justify-center mt-4">
+                <CarouselPrevious className="static translate-y-0 mr-2" />
+                <CarouselNext className="static translate-y-0" />
+              </div>
+            </Carousel>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+              {filteredVideos.slice(3).map((video) => (
+                <VideoRecommendation
+                  key={video.id}
+                  title={video.title}
+                  creator={video.creator}
+                  thumbnail={video.thumbnail}
+                  duration={video.duration}
+                  views={video.views}
+                  videoId={video.videoId}
+                />
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-xl font-semibold mb-6">Location-Based Eco Data</h3>
+            <LocationFeed className="sticky top-20" />
+          </div>
+        </div>
+        
         {/* Popular Ideas */}
         <div className="my-8">
           <div className="flex items-center justify-between mb-6">
@@ -169,21 +327,5 @@ export default function ReuseIdeas() {
   );
 }
 
-// Placeholder for the Plus icon since it wasn't imported above
-const Plus = (props: any) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M5 12h14" />
-    <path d="M12 5v14" />
-  </svg>
-);
+// Import Plus icon properly
+import { Plus } from "lucide-react";
