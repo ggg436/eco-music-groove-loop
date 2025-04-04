@@ -22,7 +22,7 @@ export default function Marketplace() {
       category: "Furniture",
       location: "Brooklyn, NY",
       distance: "1.2 miles away",
-      listingType: "sell",
+      listingType: "sell" as const,
       createdAt: new Date("2023-01-15"),
       user: {
         name: "Sarah K.",
@@ -40,7 +40,7 @@ export default function Marketplace() {
       category: "Home & Garden",
       location: "Queens, NY",
       distance: "3.5 miles away",
-      listingType: "exchange",
+      listingType: "exchange" as const,
       createdAt: new Date("2023-01-10"),
       user: {
         name: "Michael T.",
@@ -58,7 +58,7 @@ export default function Marketplace() {
       category: "Books",
       location: "Manhattan, NY",
       distance: "0.7 miles away",
-      listingType: "giveaway",
+      listingType: "giveaway" as const,
       createdAt: new Date("2023-01-05"),
       user: {
         name: "Leila H.",
@@ -76,7 +76,7 @@ export default function Marketplace() {
       category: "Kitchen",
       location: "Bronx, NY",
       distance: "5.1 miles away",
-      listingType: "sell",
+      listingType: "sell" as const,
       createdAt: new Date("2023-01-02"),
       user: {
         name: "James R.",
