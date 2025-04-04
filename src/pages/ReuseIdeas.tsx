@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
@@ -308,7 +307,6 @@ export default function ReuseIdeas() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* More items would go here */}
             <Card className="text-center p-8 border-dashed bg-muted/50">
               <CardContent className="p-0 flex flex-col items-center justify-center h-full space-y-4">
                 <Button variant="outline" size="icon" className="h-12 w-12 rounded-full">
@@ -326,6 +324,3 @@ export default function ReuseIdeas() {
     </Layout>
   );
 }
-
-// Import Plus icon properly
-import { Plus } from "lucide-react";
