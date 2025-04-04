@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Search, Music, BarChart2, Leaf, Users, User } from "lucide-react";
+import { Leaf, Users, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/common/Logo";
 
@@ -16,12 +16,6 @@ export default function Navbar() {
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
               Home
-            </Link>
-            <Link 
-              to="/music" 
-              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
-            >
-              Music
             </Link>
             <Link 
               to="/recycle" 

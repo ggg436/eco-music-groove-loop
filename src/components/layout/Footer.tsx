@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import Logo from "@/components/common/Logo";
-import { Leaf, Music, BarChart2, Users } from "lucide-react";
+import { Leaf, BarChart2, Users } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -10,7 +10,7 @@ export default function Footer() {
         <div className="space-y-4">
           <Logo />
           <p className="text-sm text-muted-foreground max-w-xs">
-            Promoting eco-conscious behavior through sustainable music streaming and community engagement.
+            Promoting eco-conscious behavior through community engagement and sustainable living.
           </p>
           <p className="text-xs text-muted-foreground">© 2025 GreenLoop. All rights reserved.</p>
         </div>
@@ -18,9 +18,6 @@ export default function Footer() {
         <div>
           <h3 className="text-base font-medium mb-4">Explore</h3>
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>
-              <Link to="/music" className="hover:text-primary">Music Stream</Link>
-            </li>
             <li>
               <Link to="/recycle" className="hover:text-primary">Recycle Log</Link>
             </li>

@@ -1,11 +1,8 @@
-
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Edit, Award, Leaf, Music, Clock, Trees, Upload, Trash2, Droplets } from "lucide-react";
-import TrackCard from "@/components/music/TrackCard";
-import PlaylistCard from "@/components/music/PlaylistCard";
+import { Edit, Award, Leaf, Clock, Trees, Upload, Trash2, Droplets, Calendar } from "lucide-react";
 
 export default function Profile() {
   // Sample activities for the profile
@@ -22,13 +19,6 @@ export default function Profile() {
       type: "challenge",
       title: "Joined Reuse Challenge",
       points: 10,
-      date: "April 2, 2025",
-    },
-    {
-      id: 3,
-      type: "music",
-      title: "Listened to 1 hour of eco music",
-      points: 5,
       date: "April 2, 2025",
     },
     {
@@ -49,14 +39,6 @@ export default function Profile() {
       icon: "trash",
       unlocked: true,
       date: "March 25, 2025",
-    },
-    {
-      id: 2,
-      title: "Music Explorer",
-      description: "Listened to 10 hours of eco-friendly music",
-      icon: "music",
-      unlocked: true,
-      date: "March 28, 2025",
     },
     {
       id: 3,
@@ -112,14 +94,6 @@ export default function Profile() {
                   
                   <div className="flex items-center justify-between border-b border-border/30 pb-2">
                     <div className="flex items-center">
-                      <Music className="h-5 w-5 text-primary mr-2" />
-                      <span className="font-medium">Music Hours</span>
-                    </div>
-                    <span className="text-lg font-semibold">12.5</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between border-b border-border/30 pb-2">
-                    <div className="flex items-center">
                       <Trash2 className="h-5 w-5 text-primary mr-2" />
                       <span className="font-medium">Items Recycled</span>
                     </div>
@@ -159,9 +133,6 @@ export default function Profile() {
                         {activity.type === "challenge" && (
                           <Award className="h-4 w-4 text-green-600" />
                         )}
-                        {activity.type === "music" && (
-                          <Music className="h-4 w-4 text-green-600" />
-                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium">{activity.title}</p>
@@ -182,7 +153,6 @@ export default function Profile() {
             <Tabs defaultValue="stats" className="mb-8">
               <TabsList>
                 <TabsTrigger value="stats">Stats & Achievements</TabsTrigger>
-                <TabsTrigger value="music">Music</TabsTrigger>
                 <TabsTrigger value="recycling">Recycling Log</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
@@ -267,9 +237,6 @@ export default function Profile() {
                           {achievement.icon === "trash" && (
                             <Trash2 className={`h-6 w-6 ${achievement.unlocked ? "text-green-600" : "text-muted-foreground"}`} />
                           )}
-                          {achievement.icon === "music" && (
-                            <Music className={`h-6 w-6 ${achievement.unlocked ? "text-green-600" : "text-muted-foreground"}`} />
-                          )}
                           {achievement.icon === "award" && (
                             <Award className={`h-6 w-6 ${achievement.unlocked ? "text-green-600" : "text-muted-foreground"}`} />
                           )}
@@ -312,97 +279,6 @@ export default function Profile() {
                         </div>
                       </div>
                     ))}
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="music" className="mt-6 space-y-6">
-                <div className="eco-card p-6">
-                  <h3 className="text-lg font-medium mb-4">Your Playlists</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <PlaylistCard 
-                      title="My Eco Mix"
-                      description="My favorite songs to listen to while recycling"
-                      image="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4"
-                      trackCount={8}
-                    />
-                    <PlaylistCard 
-                      title="Chill Nature"
-                      description="Relaxing nature sounds for meditation and focus"
-                      image="https://images.unsplash.com/photo-1441974231531-c6227db76b6e"
-                      trackCount={12}
-                    />
-                  </div>
-                </div>
-                
-                <div className="eco-card p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">Recently Played</h3>
-                    <Button variant="link" className="text-primary">View All</Button>
-                  </div>
-                  <div className="space-y-3">
-                    <TrackCard 
-                      title="Forest Whispers"
-                      artist="NatureTone"
-                      image="https://images.unsplash.com/photo-1448375240586-882707db888b"
-                      duration="3:42"
-                      ecoFriendly={true}
-                    />
-                    <TrackCard 
-                      title="Ocean Waves"
-                      artist="SoundScape"
-                      image="https://images.unsplash.com/photo-1507525428034-b723cf961d3e"
-                      duration="4:17"
-                      ecoFriendly={true}
-                    />
-                    <TrackCard 
-                      title="Rainforest Rhythm"
-                      artist="Green Harmony"
-                      image="https://images.unsplash.com/photo-1425913397330-cf8af2ff40a1"
-                      duration="5:12"
-                      ecoFriendly={true}
-                    />
-                  </div>
-                </div>
-                
-                <div className="eco-card p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium">Listening Stats</h3>
-                    <span className="text-sm text-muted-foreground">Last 30 days</span>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between border-b border-border/30 pb-2">
-                      <div className="flex items-center">
-                        <Clock className="h-5 w-5 text-primary mr-2" />
-                        <span className="font-medium">Listening Time</span>
-                      </div>
-                      <span className="text-lg font-semibold">12.5 hours</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between border-b border-border/30 pb-2">
-                      <div className="flex items-center">
-                        <Music className="h-5 w-5 text-primary mr-2" />
-                        <span className="font-medium">Tracks Played</span>
-                      </div>
-                      <span className="text-lg font-semibold">87</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between border-b border-border/30 pb-2">
-                      <div className="flex items-center">
-                        <Leaf className="h-5 w-5 text-primary mr-2" />
-                        <span className="font-medium">Eco Music Hours</span>
-                      </div>
-                      <span className="text-lg font-semibold">8.2</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between pb-2">
-                      <div className="flex items-center">
-                        <Award className="h-5 w-5 text-primary mr-2" />
-                        <span className="font-medium">Music Points Earned</span>
-                      </div>
-                      <span className="text-lg font-semibold">82</span>
-                    </div>
                   </div>
                 </div>
               </TabsContent>
@@ -565,7 +441,7 @@ export default function Profile() {
                       </label>
                       <textarea 
                         id="bio"
-                        defaultValue="Passionate about sustainability and music. Working on reducing my carbon footprint one step at a time."
+                        defaultValue="Passionate about sustainability. Working on reducing my carbon footprint one step at a time."
                         className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm h-24"
                       />
                     </div>
