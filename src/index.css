@@ -109,8 +109,17 @@
   .track-card {
     @apply rounded-lg border border-border/30 bg-card/90 p-3 transition-all duration-300 hover:shadow-md cursor-pointer;
   }
+}
 
+/* Define leaf bullet styles separately to avoid SVG data URL parsing issues */
+@layer components {
   .leaf-bullet li {
-    @apply relative pl-6 before:content-[""] before:absolute before:left-0 before:top-[0.375rem] before:h-3 before:w-3 before:bg-[url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%2322c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 8.8C15.3 5 17 4 21 3c-1 4-2 5.9-5.8 11.5A7 7 0 0 1 11 20Z"></path><path d="M11 20a7 7 0 0 0 7-7"></path><path d="m4.6 12.4 1.5 1.5"></path><path d="M3 16h2"></path><path d="M4 9h2"></path></svg>')];
+    @apply relative pl-6;
+  }
+  
+  .leaf-bullet li::before {
+    content: "";
+    @apply absolute left-0 top-[0.375rem] h-3 w-3;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2322c55e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 20A7 7 0 0 1 9.8 8.8C15.3 5 17 4 21 3c-1 4-2 5.9-5.8 11.5A7 7 0 0 1 11 20Z'%3E%3C/path%3E%3Cpath d='M11 20a7 7 0 0 0 7-7'%3E%3C/path%3E%3Cpath d='m4.6 12.4 1.5 1.5'%3E%3C/path%3E%3Cpath d='M3 16h2'%3E%3C/path%3E%3Cpath d='M4 9h2'%3E%3C/path%3E%3C/svg%3E");
   }
 }
