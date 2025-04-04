@@ -2,6 +2,7 @@
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
 import ChallengeCard from "@/components/eco/ChallengeCard";
+import PollutionChart from "@/components/eco/PollutionChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Challenges() {
@@ -207,6 +208,15 @@ export default function Challenges() {
             </div>
           </TabsContent>
         </Tabs>
+        
+        {/* Add the pollution chart below the challenges section */}
+        <div className="my-10">
+          <SectionHeading
+            title="Local Environmental Data"
+            subtitle="Real-time pollution levels in your area"
+          />
+          <PollutionChart />
+        </div>
       </div>
     </Layout>
   );
