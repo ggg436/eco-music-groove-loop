@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Leaf, Users, User } from "lucide-react";
+import { Leaf, Package, Users, User, RefreshCw, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/common/Logo";
 
@@ -18,16 +18,22 @@ export default function Navbar() {
               Home
             </Link>
             <Link 
-              to="/recycle" 
+              to="/marketplace" 
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
-              Recycle Log
+              Marketplace
+            </Link>
+            <Link 
+              to="/reuse-ideas" 
+              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+            >
+              Reuse Ideas
             </Link>
             <Link 
               to="/challenges" 
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
-              Challenges
+              Eco Challenges
             </Link>
             <Link 
               to="/community" 

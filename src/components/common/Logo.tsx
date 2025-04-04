@@ -10,7 +10,7 @@ export default function Logo() {
       </div>
       <div className="flex flex-col items-start leading-none">
         <span className="text-xl font-bold tracking-tight">GreenLoop</span>
-        <span className="text-xs text-foreground/60">Sustainable Music</span>
+        <span className="text-xs text-foreground/60">Sustainable Marketplace</span>
       </div>
     </Link>
   );
