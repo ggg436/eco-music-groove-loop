@@ -144,7 +144,7 @@ export default function AddMarketplaceItemForm() {
       // Upload image
       const imageUrl = await uploadImage(imageFile);
       
-      // Insert item using the SQL RPC endpoint to avoid type issues
+      // Insert item using the SQL RPC function to avoid type issues
       const { error } = await supabase.rpc('insert_marketplace_item', {
         p_title: formData.title,
         p_description: formData.description,
@@ -155,7 +155,7 @@ export default function AddMarketplaceItemForm() {
         p_location: formData.location,
         p_listing_type: formData.listingType,
         p_user_id: user.id
-      });
+      } as InsertMarketplaceItemParams);
       
       if (error) throw error;
       
