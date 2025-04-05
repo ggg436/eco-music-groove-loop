@@ -1,10 +1,23 @@
+import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Edit, Award, Leaf, Clock, Trees, Upload, Trash2, Droplets, Calendar } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 export default function Profile() {
+  const { user, profile, refreshProfile } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [username, setUsername] = useState(profile?.username || "");
+  const [fullName, setFullName] = useState(profile?.full_name || "");
+  const [bio, setBio] = useState(profile?.bio || "");
+  const [isSaving, setIsSaving] = useState(false);
+
   // Sample activities for the profile
   const recentActivities = [
     {
@@ -58,6 +71,48 @@ export default function Profile() {
     },
   ];
 
+  const handleEdit = () => {
+    setUsername(profile?.username || "");
+    setFullName(profile?.full_name || "");
+    setBio(profile?.bio || "");
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    
+    try {
+      setIsSaving(true);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          username,
+          full_name: fullName,
+          bio,
+        })
+        .eq('id', user.id);
+      
+      if (error) throw error;
+      
+      await refreshProfile();
+      setIsEditing(false);
+      
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="container py-8">
@@ -70,15 +125,15 @@ export default function Profile() {
                   <div className="flex flex-col items-center -mt-16">
                     <div className="h-24 w-24 rounded-full border-4 border-card overflow-hidden bg-green-100">
                       <img 
-                        src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80" 
+                        src={profile?.avatar_url || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80"} 
                         alt="Profile avatar" 
                         className="h-full w-full object-cover"
                       />
                     </div>
-                    <h2 className="mt-2 text-xl font-semibold">Emma Green</h2>
-                    <p className="text-sm text-muted-foreground">@ecoEmma</p>
+                    <h2 className="mt-2 text-xl font-semibold">{profile?.full_name || user?.email}</h2>
+                    <p className="text-sm text-muted-foreground">@{profile?.username || "user"}</p>
                   </div>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" onClick={handleEdit}>
                     <Edit className="h-4 w-4" />
                   </Button>
                 </div>
@@ -89,7 +144,7 @@ export default function Profile() {
                       <Leaf className="h-5 w-5 text-primary mr-2" />
                       <span className="font-medium">EcoPoints</span>
                     </div>
-                    <span className="text-lg font-semibold">238</span>
+                    <span className="text-lg font-semibold">{profile?.eco_points || 0}</span>
                   </div>
                   
                   <div className="flex items-center justify-between border-b border-border/30 pb-2">
@@ -411,60 +466,117 @@ export default function Profile() {
                   <h3 className="text-lg font-medium mb-6">Account Settings</h3>
                   
                   <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="name">
-                        Display Name
-                      </label>
-                      <input 
-                        id="name"
-                        type="text" 
-                        defaultValue="Emma Green"
-                        className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="email">
-                        Email
-                      </label>
-                      <input 
-                        id="email"
-                        type="email" 
-                        defaultValue="emma@example.com"
-                        className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="bio">
-                        Bio
-                      </label>
-                      <textarea 
-                        id="bio"
-                        defaultValue="Passionate about sustainability. Working on reducing my carbon footprint one step at a time."
-                        className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm h-24"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Profile Photo</label>
-                      <div className="flex items-center gap-4">
-                        <div className="h-16 w-16 rounded-full overflow-hidden bg-muted">
-                          <img 
-                            src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80" 
-                            alt="Profile avatar" 
-                            className="h-full w-full object-cover"
+                    {isEditing ? (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium" htmlFor="username">
+                            Username
+                          </label>
+                          <Input 
+                            id="username"
+                            type="text" 
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            className="mt-1"
                           />
                         </div>
-                        <Button variant="outline" size="sm">
-                          Change Photo
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button className="bg-gradient-eco">Save Changes</Button>
-                    </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium" htmlFor="fullName">
+                            Display Name
+                          </label>
+                          <Input 
+                            id="fullName"
+                            type="text" 
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium" htmlFor="email">
+                            Email
+                          </label>
+                          <Input 
+                            id="email"
+                            type="email" 
+                            value={user?.email || ""}
+                            disabled
+                            className="mt-1 bg-muted"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium" htmlFor="bio">
+                            Bio
+                          </label>
+                          <Textarea 
+                            id="bio"
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
+                            className="mt-1 h-24"
+                          />
+                        </div>
+                        
+                        <div className="pt-4 flex gap-2">
+                          <Button 
+                            className="bg-gradient-eco" 
+                            onClick={handleSave}
+                            disabled={isSaving}
+                          >
+                            {isSaving ? "Saving..." : "Save Changes"}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            onClick={() => setIsEditing(false)}
+                            disabled={isSaving}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Username</label>
+                          <p>{profile?.username || "Not set"}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Display Name</label>
+                          <p>{profile?.full_name || user?.email}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Email</label>
+                          <p>{user?.email}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium mb-1 block">Bio</label>
+                          <p className="text-sm text-muted-foreground">
+                            {profile?.bio || "No bio yet. Click edit to add one."}
+                          </p>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Profile Photo</label>
+                          <div className="flex items-center gap-4">
+                            <div className="h-16 w-16 rounded-full overflow-hidden bg-muted">
+                              <img 
+                                src={profile?.avatar_url || "https://images.unsplash.com/photo-1438761681033-6461ffad8d80"} 
+                                alt="Profile avatar" 
+                                className="h-full w-full object-cover"
+                              />
+                            </div>
+                            <Button variant="outline" size="sm" onClick={handleEdit}>
+                              Edit Profile
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
                 
