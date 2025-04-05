@@ -144,20 +144,18 @@ export default function AddMarketplaceItemForm() {
       // Upload image
       const imageUrl = await uploadImage(imageFile);
       
-      // Add item to database using raw SQL query to avoid type issues
-      const { error } = await supabase
-        .from('marketplace_items')
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          price: formData.listingType === 'sell' ? parseFloat(formData.price) : null,
-          original_price: formData.listingType === 'sell' ? parseFloat(formData.originalPrice) : null,
-          image_url: imageUrl,
-          location: formData.location,
-          listing_type: formData.listingType,
-          user_id: user.id
-        });
+      // Insert item using the SQL RPC endpoint to avoid type issues
+      const { error } = await supabase.rpc('insert_marketplace_item', {
+        p_title: formData.title,
+        p_description: formData.description,
+        p_category: formData.category,
+        p_price: formData.listingType === 'sell' ? parseFloat(formData.price) : null,
+        p_original_price: formData.listingType === 'sell' ? parseFloat(formData.originalPrice) : null,
+        p_image_url: imageUrl,
+        p_location: formData.location,
+        p_listing_type: formData.listingType,
+        p_user_id: user.id
+      });
       
       if (error) throw error;
       

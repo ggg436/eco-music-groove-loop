@@ -36,6 +36,51 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: number
+          image_url: string | null
+          listing_type: string
+          location: string | null
+          original_price: number | null
+          price: number | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: number
+          image_url?: string | null
+          listing_type: string
+          location?: string | null
+          original_price?: number | null
+          price?: number | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: number
+          image_url?: string | null
+          listing_type?: string
+          location?: string | null
+          original_price?: number | null
+          price?: number | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_type: string | null
