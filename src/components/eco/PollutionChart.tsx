@@ -8,7 +8,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Legend } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cloudSun, cloudRain, wind, cloudy } from "lucide-react";
+import { CloudSun, CloudRain, Wind, Cloud } from "lucide-react";
 
 // Types for pollution data
 interface PollutionData {
