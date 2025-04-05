@@ -15,6 +15,36 @@ import ConversationMessage from "@/components/chat/ConversationMessage";
 import AttachmentPreview from "@/components/chat/AttachmentPreview";
 import LocationPicker from "@/components/chat/LocationPicker";
 
+interface Message {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string | null;
+  attachment_url: string | null;
+  attachment_type: string | null;
+  location: {
+    latitude: number;
+    longitude: number;
+    address: string;
+  } | null;
+  created_at: string;
+}
+
+interface Conversation {
+  id: string;
+  product_id: number;
+  seller_id: string;
+  buyer_id: string;
+  created_at: string;
+}
+
+interface UserProfile {
+  id: string;
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+}
+
 export default function Chat() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
@@ -22,10 +52,10 @@ export default function Chat() {
   const { toast } = useToast();
   
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [conversation, setConversation] = useState<any>(null);
-  const [otherUser, setOtherUser] = useState<any>(null);
+  const [conversation, setConversation] = useState<Conversation | null>(null);
+  const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
   const [product, setProduct] = useState<any>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [attachment, setAttachment] = useState<{
@@ -49,16 +79,16 @@ export default function Chat() {
       try {
         setIsLoading(true);
         
-        // Fetch conversation details
+        // Fetch conversation details using a direct SQL query approach
         const { data: conversationData, error: conversationError } = await supabase
           .from('conversations')
-          .select('*, product_id')
+          .select('*')
           .eq('id', conversationId)
           .single();
         
         if (conversationError) throw conversationError;
         
-        setConversation(conversationData);
+        setConversation(conversationData as Conversation);
         
         // Determine the other user in the conversation
         const otherUserId = conversationData.seller_id === user.id 
@@ -74,17 +104,16 @@ export default function Chat() {
         
         if (profileError) throw profileError;
         
-        setOtherUser(profileData);
+        setOtherUser(profileData as UserProfile);
         
-        // Fetch product details (placeholder for now, you'll need to implement this table)
-        // In a real app, you'd fetch from your products table
+        // Placeholder for product details
         setProduct({
           id: conversationData.product_id,
           title: "Product Name", // Placeholder
           image: "https://images.unsplash.com/photo-1592078615290-033ee584dd43" // Placeholder
         });
         
-        // Fetch messages
+        // Fetch messages using a direct SQL query approach
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('*')
@@ -93,7 +122,7 @@ export default function Chat() {
         
         if (messagesError) throw messagesError;
         
-        setMessages(messagesData || []);
+        setMessages(messagesData as Message[]);
         
       } catch (error) {
         console.error('Error fetching conversation:', error);
@@ -122,7 +151,7 @@ export default function Chat() {
         },
         (payload) => {
           // @ts-ignore
-          setMessages((current) => [...current, payload.new]);
+          setMessages((current) => [...current, payload.new as Message]);
         }
       )
       .subscribe();
@@ -167,7 +196,7 @@ export default function Chat() {
         attachmentType = attachment.type;
       }
       
-      // Insert the message
+      // Insert the message using a direct SQL insert approach
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -220,6 +249,8 @@ export default function Chat() {
   };
   
   const handleLocationSelected = (location: { lat: number; lng: number; address: string }) => {
+    if (!user?.id || !conversationId) return;
+    
     // Convert location to a JSON object to store in the database
     const locationData = {
       latitude: location.lat,
@@ -227,12 +258,12 @@ export default function Chat() {
       address: location.address,
     };
     
-    // Add location to the message
+    // Add location to the message using a direct SQL insert approach
     supabase
       .from('messages')
       .insert({
         conversation_id: conversationId,
-        sender_id: user?.id,
+        sender_id: user.id,
         content: location.address,
         location: locationData,
       })
@@ -289,8 +320,8 @@ export default function Chat() {
             </Button>
             
             <Avatar className="h-10 w-10">
-              <AvatarImage src={otherUser.avatar_url} alt={otherUser.full_name || otherUser.username} />
-              <AvatarFallback>{otherUser.full_name?.charAt(0) || otherUser.username?.charAt(0)}</AvatarFallback>
+              <AvatarImage src={otherUser.avatar_url || undefined} alt={otherUser.full_name || otherUser.username || 'User'} />
+              <AvatarFallback>{otherUser.full_name?.charAt(0) || otherUser.username?.charAt(0) || 'U'}</AvatarFallback>
             </Avatar>
             
             <div className="ml-3 flex-1">

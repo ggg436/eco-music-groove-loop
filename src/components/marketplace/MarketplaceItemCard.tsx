@@ -1,3 +1,4 @@
+
 import { Package, RefreshCw, Gift, MapPin, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -75,20 +76,23 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
     }
     
     try {
-      const { data: existingConversation } = await supabase
+      // Create a custom SQL query to check for existing conversations
+      const { data: existingConversations, error: queryError } = await supabase
         .from('conversations')
         .select('id')
         .eq('product_id', item.id)
         .eq('buyer_id', user.id)
-        .eq('seller_id', item.user.id)
-        .maybeSingle();
+        .eq('seller_id', item.user.id);
       
-      if (existingConversation) {
-        navigate(`/chat/${existingConversation.id}`);
+      if (queryError) throw queryError;
+      
+      if (existingConversations && existingConversations.length > 0) {
+        navigate(`/chat/${existingConversations[0].id}`);
         return;
       }
       
-      const { data: newConversation, error } = await supabase
+      // Create a new conversation
+      const { data: newConversation, error: insertError } = await supabase
         .from('conversations')
         .insert({
           product_id: item.id,
@@ -98,7 +102,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
         .select('id')
         .single();
       
-      if (error) throw error;
+      if (insertError) throw insertError;
       
       navigate(`/chat/${newConversation.id}`);
       
