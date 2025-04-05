@@ -76,34 +76,28 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
     }
     
     try {
-      // Create a custom SQL query to check for existing conversations
-      const { data: existingConversations, error: queryError } = await supabase
-        .rpc('get_conversation_by_product_and_user', {
-          p_product_id: item.id,
-          p_buyer_id: user.id,
-          p_seller_id: item.user.id || ''
-        });
-      
-      if (queryError) {
-        // Fall back to direct query if RPC doesn't exist
-        const { data: fallbackConversations, error: fallbackError } = await supabase.from('conversations')
-          .select('id')
-          .eq('product_id', item.id)
-          .eq('buyer_id', user.id)
-          .eq('seller_id', item.user.id || '');
-        
-        if (fallbackError) throw fallbackError;
-        
-        if (fallbackConversations && fallbackConversations.length > 0) {
-          navigate(`/chat/${fallbackConversations[0].id}`);
-          return;
+      // First try to find existing conversation using the edge function
+      const { data: existingConversations, error } = await supabase.functions.invoke(
+        'get_conversation_by_product_and_user',
+        {
+          body: {
+            p_product_id: item.id,
+            p_buyer_id: user.id,
+            p_seller_id: item.user.id || ''
+          }
         }
-      } else if (existingConversations && existingConversations.length > 0) {
-        navigate(`/chat/${existingConversations[0].id}`);
+      );
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (existingConversations?.data && existingConversations.data.length > 0) {
+        navigate(`/chat/${existingConversations.data[0].id}`);
         return;
       }
       
-      // Create a new conversation
+      // Create a new conversation if none exists
       const { data: newConversation, error: insertError } = await supabase
         .from('conversations')
         .insert({

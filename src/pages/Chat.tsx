@@ -78,7 +78,7 @@ export default function Chat() {
       try {
         setIsLoading(true);
         
-        // First, fetch the conversation data using SQL query
+        // Direct SQL approach to fetch conversation
         const { data: conversationData, error: conversationError } = await supabase
           .from('conversations')
           .select('*')
@@ -87,8 +87,8 @@ export default function Chat() {
         
         if (conversationError) throw conversationError;
         
-        // Make sure we have a properly typed conversation
-        const typedConversation: Conversation = conversationData;
+        // Make sure the conversation is properly typed
+        const typedConversation = conversationData as Conversation;
         setConversation(typedConversation);
         
         // Determine the other user in the conversation
@@ -114,7 +114,7 @@ export default function Chat() {
           image: "https://images.unsplash.com/photo-1592078615290-033ee584dd43" // Placeholder
         });
         
-        // Fetch messages using a direct SQL query approach
+        // Fetch messages
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('*')
@@ -151,7 +151,6 @@ export default function Chat() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          // @ts-ignore
           setMessages((current) => [...current, payload.new as Message]);
         }
       )
@@ -197,7 +196,7 @@ export default function Chat() {
         attachmentType = attachment.type;
       }
       
-      // Insert the message using a direct SQL insert approach
+      // Insert the message
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -259,7 +258,7 @@ export default function Chat() {
       address: location.address,
     };
     
-    // Add location to the message using a direct SQL insert approach
+    // Add location to the message
     supabase
       .from('messages')
       .insert({
