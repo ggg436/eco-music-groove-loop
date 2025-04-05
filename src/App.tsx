@@ -13,6 +13,7 @@ import Challenges from "./pages/Challenges";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
 import EcoMap from "./pages/EcoMap";
+import ContactUs from "./pages/ContactUs";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Chat from "./pages/Chat";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/eco-map" element={<EcoMap />} />
             <Route path="/challenges" element={<Challenges />} />
             <Route path="/community" element={<Community />} />
+            <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile" element={
               <ProtectedRoute>

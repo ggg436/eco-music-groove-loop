@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin, LogIn, LogOut } from "lucide-react";
+import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin, LogIn, LogOut, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/common/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,6 +55,12 @@ export default function Navbar() {
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
               Community
+            </Link>
+            <Link 
+              to="/contact-us" 
+              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+            >
+              Contact Us
             </Link>
           </div>
         </div>

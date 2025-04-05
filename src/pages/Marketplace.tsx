@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Package, RefreshCw, Gift, Search, Filter, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import MarketplaceItemCard from "@/components/marketplace/MarketplaceItemCard";
+import NewItemDialog from "@/components/marketplace/NewItemDialog";
 
 export default function Marketplace() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'sell' | 'exchange' | 'giveaway'>('all');
@@ -101,10 +101,7 @@ export default function Marketplace() {
             className="mb-4 md:mb-0"
           />
           
-          <Button className="bg-gradient-eco">
-            <Plus className="mr-2 h-4 w-4" />
-            Post New Item
-          </Button>
+          <NewItemDialog />
         </div>
         
         {/* Filters */}
