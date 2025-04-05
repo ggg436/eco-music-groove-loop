@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import ConversationMessage from "@/components/chat/ConversationMessage";
 import AttachmentPreview from "@/components/chat/AttachmentPreview";
@@ -79,7 +78,7 @@ export default function Chat() {
       try {
         setIsLoading(true);
         
-        // Fetch conversation details using a direct SQL query approach
+        // First, fetch the conversation data using SQL query
         const { data: conversationData, error: conversationError } = await supabase
           .from('conversations')
           .select('*')
@@ -88,12 +87,14 @@ export default function Chat() {
         
         if (conversationError) throw conversationError;
         
-        setConversation(conversationData as Conversation);
+        // Make sure we have a properly typed conversation
+        const typedConversation: Conversation = conversationData;
+        setConversation(typedConversation);
         
         // Determine the other user in the conversation
-        const otherUserId = conversationData.seller_id === user.id 
-          ? conversationData.buyer_id 
-          : conversationData.seller_id;
+        const otherUserId = typedConversation.seller_id === user.id 
+          ? typedConversation.buyer_id 
+          : typedConversation.seller_id;
         
         // Fetch other user profile
         const { data: profileData, error: profileError } = await supabase
@@ -108,7 +109,7 @@ export default function Chat() {
         
         // Placeholder for product details
         setProduct({
-          id: conversationData.product_id,
+          id: typedConversation.product_id,
           title: "Product Name", // Placeholder
           image: "https://images.unsplash.com/photo-1592078615290-033ee584dd43" // Placeholder
         });

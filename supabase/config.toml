@@ -1,1 +1,5 @@
+
 project_id = "orpmmqtuafmpttnjabqy"
+
+[functions.get_conversation_by_product_and_user]
+verify_jwt = true
