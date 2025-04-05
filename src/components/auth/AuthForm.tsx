@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,9 +33,7 @@ export default function AuthForm() {
     setIsLoading(true);
     
     try {
-      const { data, error } = await signIn(email, password);
-      
-      if (error) throw error;
+      await signIn(email, password);
       
       toast.success("Signed in successfully!");
       navigate("/");

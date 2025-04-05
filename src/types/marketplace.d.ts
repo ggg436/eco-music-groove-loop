@@ -20,4 +20,5 @@ declare interface MarketplaceItem {
   image_url?: string;
   original_price?: number;
   created_at?: string;
+  listing_type?: 'sell' | 'exchange' | 'giveaway';
 }
