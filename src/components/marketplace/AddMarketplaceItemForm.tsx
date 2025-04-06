@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -259,7 +260,7 @@ export default function AddMarketplaceItemForm() {
         <Label htmlFor="category">Category</Label>
         <Select
           value={formData.category}
-          onValueChange={(value) => handleSelectChange("category", value)}
+          onValueChange={(value: string) => handleSelectChange("category", value)}
         >
           <SelectTrigger id="category">
             <SelectValue placeholder="Select a category" />
