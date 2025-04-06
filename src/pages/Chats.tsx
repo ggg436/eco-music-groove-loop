@@ -60,19 +60,47 @@ export default function Chats() {
             .single();
           
           // Fetch the latest message
-          const { data: latestMessage } = await supabase
+          const { data: latestMessageData } = await supabase
             .from('messages')
             .select('*')
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: false })
             .limit(1)
             .single();
+            
+          // Convert location format to match Message type if it exists
+          let latestMessage: Message | undefined;
+          
+          if (latestMessageData) {
+            latestMessage = {
+              ...latestMessageData,
+              location: latestMessageData.location 
+                ? {
+                    lat: (latestMessageData.location as any).latitude || 0,
+                    lng: (latestMessageData.location as any).longitude || 0,
+                    address: (latestMessageData.location as any).address || '',
+                  }
+                : undefined
+            };
+          }
+          
+          // Create product object compatible with MarketplaceItem type
+          const product: MarketplaceItem | undefined = conv.product 
+            ? {
+                id: conv.product.id,
+                title: conv.product.title || '',
+                images: conv.product.image_url ? [conv.product.image_url] : [],
+                listingType: 'sell', // Default value as we don't have this info directly
+                createdAt: new Date(),
+                image_url: conv.product.image_url
+              }
+            : undefined;
           
           conversationsWithDetails.push({
             ...conv,
             sellerProfile: conv.seller_id === user.id ? undefined : profileData,
             buyerProfile: conv.buyer_id === user.id ? undefined : profileData,
-            product: conv.product,
+            product: product,
             latestMessage: latestMessage
           });
         }

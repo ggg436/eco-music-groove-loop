@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -147,7 +148,7 @@ export default function AddMarketplaceItemForm() {
         p_original_price: formData.listingType === 'sell' ? parseFloat(formData.originalPrice) : null,
         p_image_url: imageUrl,
         p_location: formData.location,
-        p_listing_type: formData.listingType,
+        p_listing_type: formData.listingType as "sell" | "exchange" | "giveaway",
         p_user_id: user.id
       };
       

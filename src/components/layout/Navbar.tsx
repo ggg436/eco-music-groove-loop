@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin, LogIn, LogOut, MessageCircle, Plant } from "lucide-react";
+import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin, LogIn, LogOut, MessageCircle, Flower } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/common/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -91,7 +91,7 @@ export default function Navbar() {
               
               <Link to="/plant-identifier">
                 <Button variant="ghost" size="icon" className="relative">
-                  <Plant className="h-5 w-5" />
+                  <Flower className="h-5 w-5" />
                   <span className="sr-only">Plantist</span>
                 </Button>
               </Link>
