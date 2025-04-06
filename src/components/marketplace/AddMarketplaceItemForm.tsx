@@ -86,7 +86,7 @@ export default function AddMarketplaceItemForm() {
     }
   };
   
-  // Fix the type definition for the handleSelectChange function
+  // Fix the type definition for the handleSelectChange function to match what Select component expects
   const handleSelectChange = (name: keyof FormDataType, value: string) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
@@ -261,7 +261,7 @@ export default function AddMarketplaceItemForm() {
         <Label htmlFor="category">Category</Label>
         <Select
           value={formData.category}
-          onValueChange={(value) => handleSelectChange("category", value)}
+          onValueChange={(value: string) => handleSelectChange("category", value)}
         >
           <SelectTrigger id="category">
             <SelectValue placeholder="Select a category" />
