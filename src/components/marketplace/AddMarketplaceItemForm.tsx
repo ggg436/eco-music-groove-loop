@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -29,11 +30,21 @@ const categories = [
   "Other",
 ];
 
+type FormDataType = {
+  title: string;
+  description: string;
+  category: string;
+  price: string;
+  originalPrice: string;
+  location: string;
+  listingType: 'sell' | 'exchange' | 'giveaway';
+};
+
 export default function AddMarketplaceItemForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataType>({
     title: "",
     description: "",
     category: "",
@@ -75,11 +86,11 @@ export default function AddMarketplaceItemForm() {
     }
   };
   
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name: keyof FormDataType, value: string) => {
     setFormData(prevData => ({ ...prevData, [name]: value }));
   };
   
-  const handleListingTypeChange = (value: string) => {
+  const handleListingTypeChange = (value: 'sell' | 'exchange' | 'giveaway') => {
     setFormData({ ...formData, listingType: value });
     
     setPriceWarning(false);
@@ -147,7 +158,7 @@ export default function AddMarketplaceItemForm() {
         p_original_price: formData.listingType === 'sell' ? parseFloat(formData.originalPrice) : null,
         p_image_url: imageUrl,
         p_location: formData.location,
-        p_listing_type: formData.listingType as 'sell' | 'exchange' | 'giveaway',
+        p_listing_type: formData.listingType,
         p_user_id: user.id
       };
       
