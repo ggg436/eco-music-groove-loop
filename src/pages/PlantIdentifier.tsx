@@ -5,11 +5,12 @@ import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, Leaf, AlertCircle } from "lucide-react";
+import { Camera, Upload, Leaf, AlertCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PlantIdentifier() {
   const { user } = useAuth();
@@ -41,7 +42,7 @@ export default function PlantIdentifier() {
     const reader = new FileReader();
     reader.onloadend = () => {
       setImage(reader.result as string);
-      identifyPlant(file);
+      identifyPlant(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -53,34 +54,26 @@ export default function PlantIdentifier() {
     document.getElementById('camera-input')?.click();
   };
   
-  const identifyPlant = async (file: File) => {
+  const identifyPlant = async (imageBase64: string) => {
     try {
       setIsIdentifying(true);
+      setResult(null);
       
-      // Simulate API call with a timeout for now
-      // In a real app, you would send the image to an API for identification
-      setTimeout(() => {
-        // Mock data response
-        setResult({
-          scientificName: "Monstera deliciosa",
-          commonName: "Swiss Cheese Plant",
-          family: "Araceae",
-          description: "Monstera deliciosa is a species of flowering plant native to tropical forests of southern Mexico, south to Panama. It has been introduced to many tropical areas, and has become a mildly invasive species in Hawaii, Seychelles, Ascension Island and the Society Islands.",
-          care: {
-            water: "Allow the top 2-3 inches of soil to dry out between waterings",
-            light: "Bright, indirect light. Avoid direct sunlight which can burn the leaves",
-            soil: "Well-draining, rich potting soil"
-          },
-          diseases: [
-            "Leaf spot diseases",
-            "Root rot from overwatering",
-            "Spider mites"
-          ],
-          additional: "The plant produces edible fruit, which tastes like a mix of banana and pineapple. The leaves develop holes (fenestrations) as the plant matures."
-        });
-        
-        setIsIdentifying(false);
-      }, 2000);
+      // Call our Supabase Edge Function for plant identification
+      const { data, error } = await supabase.functions.invoke('identify-plant', {
+        body: { imageBase64 },
+      });
+      
+      if (error) {
+        throw new Error(`Function error: ${error.message}`);
+      }
+      
+      setResult(data);
+      
+      toast({
+        title: "Plant identified!",
+        description: `We've identified this as ${data.commonName || 'a plant'}`,
+      });
       
     } catch (error) {
       console.error("Error identifying plant:", error);
@@ -89,6 +82,7 @@ export default function PlantIdentifier() {
         title: "Identification failed",
         description: "We couldn't identify your plant. Please try again with a clearer image."
       });
+    } finally {
       setIsIdentifying(false);
     }
   };
@@ -228,17 +222,8 @@ export default function PlantIdentifier() {
                   <CardContent>
                     {isIdentifying ? (
                       <div className="flex flex-col items-center justify-center py-8">
-                        <div className="animate-pulse flex space-x-4">
-                          <div className="rounded-full bg-green-100 h-12 w-12"></div>
-                          <div className="flex-1 space-y-4 py-1">
-                            <div className="h-4 bg-green-100 rounded w-3/4"></div>
-                            <div className="space-y-2">
-                              <div className="h-4 bg-green-100 rounded"></div>
-                              <div className="h-4 bg-green-100 rounded w-5/6"></div>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="text-muted-foreground mt-4">
+                        <Loader2 className="h-12 w-12 text-green-600 animate-spin mb-4" />
+                        <p className="text-muted-foreground">
                           Our AI is analyzing your plant. This may take a moment...
                         </p>
                       </div>
