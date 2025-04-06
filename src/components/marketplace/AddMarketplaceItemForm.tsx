@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -51,7 +50,7 @@ export default function AddMarketplaceItemForm() {
     price: "",
     originalPrice: "",
     location: "",
-    listingType: "sell", // Default to "sell"
+    listingType: "sell",
   });
   
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -86,7 +85,6 @@ export default function AddMarketplaceItemForm() {
     }
   };
   
-  // Fix the type definition for the handleSelectChange function to match what Select component expects
   const handleSelectChange = (name: keyof FormDataType, value: string) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
@@ -261,7 +259,7 @@ export default function AddMarketplaceItemForm() {
         <Label htmlFor="category">Category</Label>
         <Select
           value={formData.category}
-          onValueChange={(value: string) => handleSelectChange("category", value)}
+          onValueChange={(value) => handleSelectChange("category", value)}
         >
           <SelectTrigger id="category">
             <SelectValue placeholder="Select a category" />
