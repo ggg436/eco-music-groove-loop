@@ -86,6 +86,7 @@ export default function AddMarketplaceItemForm() {
     }
   };
   
+  // Fix the type definition for handleSelectChange
   const handleSelectChange = (name: keyof FormDataType, value: string) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
