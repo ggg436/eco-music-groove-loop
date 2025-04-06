@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -53,7 +52,6 @@ export default function AddMarketplaceItemForm() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     
-    // Check price threshold for selling items
     if (name === 'price' && formData.listingType === 'sell' && formData.originalPrice) {
       const price = parseFloat(value);
       const originalPrice = parseFloat(formData.originalPrice);
@@ -84,7 +82,6 @@ export default function AddMarketplaceItemForm() {
   const handleListingTypeChange = (value: string) => {
     setFormData({ ...formData, listingType: value });
     
-    // Reset price warning when changing listing type
     setPriceWarning(false);
   };
   
@@ -94,7 +91,6 @@ export default function AddMarketplaceItemForm() {
     
     setImageFile(file);
     
-    // Create image preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setImagePreview(reader.result as string);
@@ -141,11 +137,9 @@ export default function AddMarketplaceItemForm() {
     try {
       setIsSubmitting(true);
       
-      // Upload image
       const imageUrl = await uploadImage(imageFile);
       
-      // Insert item using the SQL RPC function to avoid type issues
-      const { error } = await supabase.rpc('insert_marketplace_item', {
+      const params: InsertMarketplaceItemParams = {
         p_title: formData.title,
         p_description: formData.description,
         p_category: formData.category,
@@ -155,7 +149,9 @@ export default function AddMarketplaceItemForm() {
         p_location: formData.location,
         p_listing_type: formData.listingType,
         p_user_id: user.id
-      } as InsertMarketplaceItemParams);
+      };
+      
+      const { error } = await supabase.rpc('insert_marketplace_item', params);
       
       if (error) throw error;
       
