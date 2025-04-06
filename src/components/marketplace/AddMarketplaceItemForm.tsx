@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,9 +86,9 @@ export default function AddMarketplaceItemForm() {
     }
   };
   
-  // Fix: Properly type the 'name' parameter as a key of FormDataType
+  // Properly type the name parameter to be a key of FormDataType
   const handleSelectChange = (name: keyof FormDataType, value: string) => {
-    setFormData(prevData => ({ ...prevData, [name]: value }));
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
   
   const handleListingTypeChange = (value: 'sell' | 'exchange' | 'giveaway') => {
