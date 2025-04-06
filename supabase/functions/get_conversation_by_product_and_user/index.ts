@@ -31,15 +31,16 @@ serve(async (req) => {
       throw new Error("Missing required parameters");
     }
 
-    // Use a raw SQL query to avoid typechecking issues
-    const { data, error } = await supabaseClient.rpc('get_conversation', {
-      p_product_id,
-      p_buyer_id,
-      p_seller_id
-    });
+    // Query the database
+    const { data, error } = await supabaseClient
+      .from('conversations')
+      .select('*')
+      .eq('product_id', p_product_id)
+      .eq('buyer_id', p_buyer_id)
+      .eq('seller_id', p_seller_id);
 
     if (error) {
-      console.error("RPC error:", error);
+      console.error("Query error:", error);
       throw error;
     }
 

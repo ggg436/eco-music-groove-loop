@@ -140,6 +140,7 @@ export default function AddMarketplaceItemForm() {
       
       const imageUrl = await uploadImage(imageFile);
       
+      // Here's the fix: we need to explicitly type the params
       const params: InsertMarketplaceItemParams = {
         p_title: formData.title,
         p_description: formData.description,
@@ -148,13 +149,18 @@ export default function AddMarketplaceItemForm() {
         p_original_price: formData.listingType === 'sell' ? parseFloat(formData.originalPrice) : null,
         p_image_url: imageUrl,
         p_location: formData.location,
-        p_listing_type: formData.listingType as "sell" | "exchange" | "giveaway",
+        p_listing_type: formData.listingType as 'sell' | 'exchange' | 'giveaway',
         p_user_id: user.id
       };
       
+      console.log("Submitting item with params:", params);
+      
       const { error } = await supabase.rpc('insert_marketplace_item', params);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error from RPC:", error);
+        throw error;
+      }
       
       toast.success("Item posted successfully!");
       navigate("/marketplace");

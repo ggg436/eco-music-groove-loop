@@ -85,16 +85,18 @@ export default function Chats() {
           }
           
           // Create product object compatible with MarketplaceItem type
-          const product: MarketplaceItem | undefined = conv.product 
-            ? {
-                id: conv.product.id,
-                title: conv.product.title || '',
-                images: conv.product.image_url ? [conv.product.image_url] : [],
-                listingType: 'sell', // Default value as we don't have this info directly
-                createdAt: new Date(),
-                image_url: conv.product.image_url
-              }
-            : undefined;
+          let product: MarketplaceItem | undefined = undefined;
+          
+          if (conv.product && typeof conv.product === 'object') {
+            product = {
+              id: conv.product.id || 0,
+              title: conv.product.title || '',
+              images: conv.product.image_url ? [conv.product.image_url] : [],
+              listingType: 'sell', // Default value as we don't have this info directly
+              createdAt: new Date(),
+              image_url: conv.product.image_url
+            };
+          }
           
           conversationsWithDetails.push({
             ...conv,

@@ -33,6 +33,6 @@ declare interface InsertMarketplaceItemParams {
   p_original_price: number | null;
   p_image_url: string;
   p_location: string;
-  p_listing_type: string;
+  p_listing_type: 'sell' | 'exchange' | 'giveaway';
   p_user_id: string;
 }

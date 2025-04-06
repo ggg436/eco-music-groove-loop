@@ -75,25 +75,29 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
       return;
     }
     
+    if (!item.user.id) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Cannot start conversation with this seller",
+      });
+      return;
+    }
+    
     try {
-      // First try to find existing conversation using the edge function
-      const { data: existingConversations, error } = await supabase.functions.invoke(
-        'get_conversation_by_product_and_user',
-        {
-          body: {
-            p_product_id: item.id,
-            p_buyer_id: user.id,
-            p_seller_id: item.user.id || ''
-          }
-        }
-      );
+      // First check if a conversation already exists
+      const { data: existingConversations, error: queryError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('product_id', item.id)
+        .eq('buyer_id', user.id)
+        .eq('seller_id', item.user.id);
       
-      if (error) {
-        throw error;
-      }
+      if (queryError) throw queryError;
       
-      if (existingConversations?.data && existingConversations.data.length > 0) {
-        navigate(`/chat/${existingConversations.data[0].id}`);
+      // If a conversation already exists, navigate to it
+      if (existingConversations && existingConversations.length > 0) {
+        navigate(`/chat/${existingConversations[0].id}`);
         return;
       }
       
@@ -102,7 +106,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
         .from('conversations')
         .insert({
           product_id: item.id,
-          seller_id: item.user.id || '',
+          seller_id: item.user.id,
           buyer_id: user.id,
         })
         .select('id')
