@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -86,7 +85,6 @@ export default function AddMarketplaceItemForm() {
     }
   };
   
-  // Fix the type definition for handleSelectChange
   const handleSelectChange = (name: keyof FormDataType, value: string) => {
     setFormData((prevData) => ({ ...prevData, [name]: value }));
   };
