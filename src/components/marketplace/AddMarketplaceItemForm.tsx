@@ -76,7 +76,7 @@ export default function AddMarketplaceItemForm() {
   };
   
   const handleSelectChange = (name: string, value: string) => {
-    setFormData({ ...formData, [name]: value });
+    setFormData(prevData => ({ ...prevData, [name]: value }));
   };
   
   const handleListingTypeChange = (value: string) => {

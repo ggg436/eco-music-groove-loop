@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -81,12 +82,12 @@ export default function Chats() {
           
           if (conv.product && typeof conv.product === 'object') {
             product = {
-              id: conv.product.id || 0,
-              title: conv.product.title || '',
-              images: conv.product.image_url ? [conv.product.image_url] : [],
+              id: (conv.product as any).id || 0,
+              title: (conv.product as any).title || '',
+              images: (conv.product as any).image_url ? [(conv.product as any).image_url] : [],
               listingType: 'sell', // Default value as we don't have this info directly
               createdAt: new Date(),
-              image_url: conv.product.image_url
+              image_url: (conv.product as any).image_url
             };
           }
           
