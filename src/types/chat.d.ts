@@ -26,7 +26,7 @@ declare interface Message {
 declare interface ConversationWithDetails extends Conversation {
   sellerProfile?: Profile;
   buyerProfile?: Profile;
-  product?: MarketplaceItem;
+  product?: MarketplaceItem | null;
   latestMessage?: Message;
 }
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -29,7 +28,6 @@ export default function Chats() {
       try {
         setIsLoading(true);
         
-        // Fetch all conversations where user is either buyer or seller
         const { data, error } = await supabase
           .from('conversations')
           .select(`
@@ -45,21 +43,17 @@ export default function Chats() {
         
         if (error) throw error;
         
-        // Format conversations with additional info
         const conversationsWithDetails: ConversationWithDetails[] = [];
         
         for (const conv of data) {
-          // Determine the other user ID
           const otherUserId = conv.buyer_id === user.id ? conv.seller_id : conv.buyer_id;
           
-          // Fetch the other user's profile
           const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', otherUserId)
             .single();
           
-          // Fetch the latest message
           const { data: latestMessageData } = await supabase
             .from('messages')
             .select('*')
@@ -68,7 +62,6 @@ export default function Chats() {
             .limit(1)
             .single();
             
-          // Convert location format to match Message type if it exists
           let latestMessage: Message | undefined;
           
           if (latestMessageData) {
@@ -84,8 +77,7 @@ export default function Chats() {
             };
           }
           
-          // Create product object compatible with MarketplaceItem type
-          let product: MarketplaceItem | undefined = undefined;
+          let product: MarketplaceItem | null = null;
           
           if (conv.product && typeof conv.product === 'object') {
             product = {
@@ -122,7 +114,6 @@ export default function Chats() {
     
     fetchConversations();
     
-    // Subscribe to new messages
     const channel = supabase
       .channel('public:messages')
       .on(
@@ -133,7 +124,6 @@ export default function Chats() {
           table: 'messages',
         },
         (payload) => {
-          // Update the conversation list when a new message is added
           fetchConversations();
         }
       )

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -140,7 +139,6 @@ export default function AddMarketplaceItemForm() {
       
       const imageUrl = await uploadImage(imageFile);
       
-      // Here's the fix: we need to explicitly type the params
       const params: InsertMarketplaceItemParams = {
         p_title: formData.title,
         p_description: formData.description,
