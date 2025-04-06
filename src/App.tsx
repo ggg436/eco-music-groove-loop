@@ -17,6 +17,8 @@ import ContactUs from "./pages/ContactUs";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Chat from "./pages/Chat";
+import Chats from "./pages/Chats";
+import PlantIdentifier from "./pages/PlantIdentifier";
 
 const queryClient = new QueryClient();
 
@@ -36,9 +38,19 @@ const App = () => (
             <Route path="/community" element={<Community />} />
             <Route path="/contact-us" element={<ContactUs />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/plant-identifier" element={
+              <ProtectedRoute>
+                <PlantIdentifier />
+              </ProtectedRoute>
+            } />
             <Route path="/profile" element={
               <ProtectedRoute>
                 <Profile />
+              </ProtectedRoute>
+            } />
+            <Route path="/chats" element={
+              <ProtectedRoute>
+                <Chats />
               </ProtectedRoute>
             } />
             <Route path="/chat/:conversationId" element={

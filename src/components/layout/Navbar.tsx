@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin, LogIn, LogOut, Mail } from "lucide-react";
+import { Leaf, Package, Users, User, RefreshCw, Gift, MapPin, LogIn, LogOut, MessageCircle, Plant } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from "@/components/common/Logo";
 import { useAuth } from "@/contexts/AuthContext";
@@ -57,6 +57,12 @@ export default function Navbar() {
               Community
             </Link>
             <Link 
+              to="/plant-identifier" 
+              className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
+            >
+              Plantist
+            </Link>
+            <Link 
               to="/contact-us" 
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
             >
@@ -75,6 +81,21 @@ export default function Navbar() {
                   <span className="ml-1 text-xs">EcoPoints</span>
                 </div>
               )}
+              
+              <Link to="/chats">
+                <Button variant="ghost" size="icon" className="relative">
+                  <MessageCircle className="h-5 w-5" />
+                  <span className="sr-only">Messages</span>
+                </Button>
+              </Link>
+              
+              <Link to="/plant-identifier">
+                <Button variant="ghost" size="icon" className="relative">
+                  <Plant className="h-5 w-5" />
+                  <span className="sr-only">Plantist</span>
+                </Button>
+              </Link>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
