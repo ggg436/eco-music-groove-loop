@@ -260,7 +260,6 @@ export default function AddMarketplaceItemForm() {
         <Select
           value={formData.category}
           onValueChange={(value) => handleSelectChange("category", value)}
-          required
         >
           <SelectTrigger id="category">
             <SelectValue placeholder="Select a category" />
