@@ -39,10 +39,19 @@ export default function MarketplaceItemForm() {
       return;
     }
 
-    if (!title || !description || !price || !category || !location || !listingType || !image) {
+    if (!title || !description || !category || !location || !listingType || !image) {
       toast({
         variant: "destructive",
-        title: "Please fill out all fields and upload an image.",
+        title: "Please fill out all required fields and upload an image.",
+      });
+      return;
+    }
+
+    // For donation/exchange listings, price can be optional
+    if (listingType === "Offer" && !price) {
+      toast({
+        variant: "destructive",
+        title: "Please set a price for your offer listing.",
       });
       return;
     }
@@ -50,14 +59,18 @@ export default function MarketplaceItemForm() {
     setIsSubmitting(true);
 
     try {
-      // 1. Upload image to Supabase storage
-      const imagePath = `marketplace/${user.id}/${Date.now()}-${image.name}`;
+      // Generate a unique file name to avoid conflicts
+      const fileExt = image.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
       
-      // Upload the file to Supabase storage using the client directly
-      const { error: uploadError } = await supabase
+      console.log('Uploading to storage bucket:', filePath);
+      
+      // Upload the file to Supabase storage
+      const { data: uploadData, error: uploadError } = await supabase
         .storage
         .from('marketplace')
-        .upload(imagePath, image, {
+        .upload(filePath, image, {
           cacheControl: '3600',
           upsert: false
         });
@@ -70,7 +83,9 @@ export default function MarketplaceItemForm() {
       const { data: { publicUrl } } = supabase
         .storage
         .from('marketplace')
-        .getPublicUrl(imagePath);
+        .getPublicUrl(filePath);
+
+      console.log('File uploaded successfully. Public URL:', publicUrl);
 
       // 2. Save item details to Supabase database
       const { error: dbError } = await supabase
