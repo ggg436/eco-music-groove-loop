@@ -1,8 +1,8 @@
+
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { storage } from "@/integrations/supabase/storage";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,11 @@ export default function AddMarketplaceItemForm() {
     try {
       // 1. Upload image to Supabase storage
       const imagePath = `marketplace/${user.id}/${Date.now()}-${image.name}`;
-      const { error: uploadError } = await storage
+      
+      // Upload the file to Supabase storage using the client directly
+      const { error: uploadError, data } = await supabase
+        .storage
+        .from('marketplace')
         .upload(imagePath, image, {
           cacheControl: '3600',
           upsert: false
@@ -70,7 +74,11 @@ export default function AddMarketplaceItemForm() {
         throw new Error(`Image upload failed: ${uploadError.message}`);
       }
 
-      const publicImageUrl = storage.getPublicUrl(imagePath).data.publicUrl;
+      // Get the public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('marketplace')
+        .getPublicUrl(imagePath);
 
       // 2. Save item details to Supabase database
       const { error: dbError } = await supabase
@@ -84,7 +92,7 @@ export default function AddMarketplaceItemForm() {
           category,
           location,
           listing_type: listingType,
-          image_url: publicImageUrl,
+          image_url: publicUrl,
         });
 
       if (dbError) {
