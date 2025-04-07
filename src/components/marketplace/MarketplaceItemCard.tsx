@@ -59,11 +59,24 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
 
   const startConversation = async () => {
     if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to message the seller",
+      });
       navigate('/auth', { state: { from: `/marketplace` } });
       return;
     }
     
     const sellerId = item.user?.id || item.user_id;
+    
+    if (!sellerId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Cannot identify the seller of this item",
+      });
+      return;
+    }
     
     if (user.id === sellerId) {
       toast({
@@ -73,16 +86,12 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
       return;
     }
     
-    if (!sellerId) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Cannot start conversation with this seller",
-      });
-      return;
-    }
-    
     try {
+      toast({
+        title: "Starting conversation",
+        description: "Please wait...",
+      });
+      
       // First check if a conversation already exists
       const { data: existingConversations, error: queryError } = await supabase
         .from('conversations')
@@ -111,6 +120,15 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
         .single();
       
       if (insertError) throw insertError;
+      
+      // Add an initial message from the buyer
+      await supabase
+        .from('messages')
+        .insert({
+          conversation_id: newConversation.id,
+          sender_id: user.id,
+          content: `Hi, I'm interested in your listing: "${item.title}"`,
+        });
       
       navigate(`/chat/${newConversation.id}`);
       
@@ -212,7 +230,11 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
           variant="outline" 
           size="sm" 
           className="w-full flex items-center justify-center" 
-          onClick={startConversation}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startConversation();
+          }}
         >
           <MessageCircle className="h-4 w-4 mr-1" />
           Message

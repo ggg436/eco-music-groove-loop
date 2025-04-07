@@ -5,12 +5,13 @@ import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MessageCircle, Search, ArrowUpDown, Calendar } from "lucide-react";
+import { MessageCircle, Search, ArrowUpDown, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 export default function Chats() {
   const { user } = useAuth();
@@ -36,7 +37,9 @@ export default function Chats() {
             product:product_id (
               id, 
               title, 
-              image_url
+              image_url,
+              price,
+              listing_type
             )
           `)
           .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
@@ -84,9 +87,9 @@ export default function Chats() {
             product = {
               id: (conv.product as any).id || 0,
               title: (conv.product as any).title || '',
+              price: (conv.product as any).price !== null ? Number((conv.product as any).price) : null,
               images: (conv.product as any).image_url ? [(conv.product as any).image_url] : [],
-              listingType: 'sell', // Default value as we don't have this info directly
-              createdAt: new Date(),
+              listingType: getNormalizedListingType((conv.product as any).listing_type),
               image_url: (conv.product as any).image_url
             };
           }
@@ -115,8 +118,9 @@ export default function Chats() {
     
     fetchConversations();
     
-    const channel = supabase
-      .channel('public:messages')
+    // Set up realtime subscription for new messages
+    const messagesChannel = supabase
+      .channel('messages-channel')
       .on(
         'postgres_changes',
         {
@@ -124,16 +128,45 @@ export default function Chats() {
           schema: 'public',
           table: 'messages',
         },
-        (payload) => {
+        () => {
+          fetchConversations();
+        }
+      )
+      .subscribe();
+    
+    // Set up realtime subscription for updated conversations
+    const conversationsChannel = supabase
+      .channel('conversations-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+        },
+        () => {
           fetchConversations();
         }
       )
       .subscribe();
     
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(conversationsChannel);
     };
   }, [user, toast]);
+  
+  // Helper function to normalize listing type for display
+  const getNormalizedListingType = (type: string | undefined): 'sell' | 'exchange' | 'giveaway' => {
+    if (!type) return 'sell';
+    
+    const lowerType = type.toLowerCase();
+    if (lowerType === 'offer' || lowerType === 'sell') return 'sell';
+    if (lowerType === 'exchange') return 'exchange';
+    if (lowerType === 'donation' || lowerType === 'giveaway') return 'giveaway';
+    
+    return 'sell'; // Default case
+  };
   
   const getOtherUserProfile = (conversation: ConversationWithDetails) => {
     return conversation.sellerProfile || conversation.buyerProfile;
@@ -141,6 +174,21 @@ export default function Chats() {
   
   const handleConversationClick = (id: string) => {
     navigate(`/chat/${id}`);
+  };
+  
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    const isThisYear = date.getFullYear() === now.getFullYear();
+    
+    if (isToday) {
+      return formatDistanceToNow(date, { addSuffix: true });
+    } else if (isThisYear) {
+      return format(date, 'MMM d, h:mm a');
+    } else {
+      return format(date, 'MMM d, yyyy');
+    }
   };
   
   const filteredConversations = conversations
@@ -209,7 +257,7 @@ export default function Chats() {
         {isLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, index) => (
-              <Card key={index}>
+              <Card key={index} className="animate-pulse">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
                     <Skeleton className="h-12 w-12 rounded-full" />
@@ -267,28 +315,40 @@ export default function Chats() {
                           </h3>
                           <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                             {conversation.updated_at ? (
-                              format(new Date(conversation.updated_at), 'MMM d, h:mm a')
+                              formatTimestamp(conversation.updated_at)
                             ) : (
-                              format(new Date(conversation.created_at), 'MMM d, h:mm a')
+                              formatTimestamp(conversation.created_at)
                             )}
                           </span>
                         </div>
                         
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                            {isCurrentUserSeller ? 'You are selling' : 'You are buying'}
-                          </span>
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conversation.product?.title || 'Product not available'}
-                          </p>
+                          <Badge variant="outline" className="text-xs">
+                            {isCurrentUserSeller ? 'Selling' : 'Buying'}
+                          </Badge>
+                          
+                          {conversation.product && (
+                            <div className="flex items-center gap-1 truncate">
+                              <span className="text-sm font-medium truncate">
+                                {conversation.product.title}
+                              </span>
+                              {conversation.product.price !== null && (
+                                <span className="text-xs text-muted-foreground">
+                                  (${conversation.product.price})
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                         
                         {latestMessage && (
-                          <p className="text-sm text-muted-foreground truncate mt-1">
-                            <span className="font-medium">
-                              {latestMessage.sender_id === user.id ? 'You: ' : ''}
+                          <p className="text-sm text-muted-foreground truncate mt-2">
+                            <span className="font-medium inline-block mr-1">
+                              {latestMessage.sender_id === user.id ? 'You:' : ''}
                             </span>
-                            {latestMessage.content || (latestMessage.attachment_url ? 'Sent an attachment' : 'Sent a location')}
+                            {latestMessage.content || 
+                             (latestMessage.attachment_url ? 'Sent an attachment' : 
+                              (latestMessage.location ? 'Shared a location' : 'New message'))}
                           </p>
                         )}
                       </div>

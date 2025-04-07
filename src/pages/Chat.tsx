@@ -10,39 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import ConversationMessage from "@/components/chat/ConversationMessage";
 import AttachmentPreview from "@/components/chat/AttachmentPreview";
 import LocationPicker from "@/components/chat/LocationPicker";
-
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_id: string;
-  content: string | null;
-  attachment_url: string | null;
-  attachment_type: string | null;
-  location: {
-    latitude: number;
-    longitude: number;
-    address: string;
-  } | null;
-  created_at: string;
-}
-
-interface Conversation {
-  id: string;
-  product_id: number;
-  seller_id: string;
-  buyer_id: string;
-  created_at: string;
-}
-
-interface UserProfile {
-  id: string;
-  username: string | null;
-  full_name: string | null;
-  avatar_url: string | null;
-}
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Chat() {
   const { conversationId } = useParams();
@@ -54,8 +26,8 @@ export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [conversation, setConversation] = useState<Conversation | null>(null);
-  const [otherUser, setOtherUser] = useState<UserProfile | null>(null);
-  const [product, setProduct] = useState<any>(null);
+  const [otherUser, setOtherUser] = useState<Profile | null>(null);
+  const [product, setProduct] = useState<MarketplaceItem | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [attachment, setAttachment] = useState<{
     file: File | null;
@@ -78,7 +50,7 @@ export default function Chat() {
       try {
         setIsLoading(true);
         
-        // Direct SQL approach to fetch conversation
+        // Fetch conversation details
         const { data: conversationData, error: conversationError } = await supabase
           .from('conversations')
           .select('*')
@@ -87,14 +59,12 @@ export default function Chat() {
         
         if (conversationError) throw conversationError;
         
-        // Make sure the conversation is properly typed
-        const typedConversation = conversationData as Conversation;
-        setConversation(typedConversation);
+        setConversation(conversationData);
         
         // Determine the other user in the conversation
-        const otherUserId = typedConversation.seller_id === user.id 
-          ? typedConversation.buyer_id 
-          : typedConversation.seller_id;
+        const otherUserId = conversationData.seller_id === user.id 
+          ? conversationData.buyer_id 
+          : conversationData.seller_id;
         
         // Fetch other user profile
         const { data: profileData, error: profileError } = await supabase
@@ -105,14 +75,31 @@ export default function Chat() {
         
         if (profileError) throw profileError;
         
-        setOtherUser(profileData as UserProfile);
+        setOtherUser(profileData);
         
-        // Placeholder for product details
-        setProduct({
-          id: typedConversation.product_id,
-          title: "Product Name", // Placeholder
-          image: "https://images.unsplash.com/photo-1592078615290-033ee584dd43" // Placeholder
-        });
+        // Fetch product details
+        const { data: productData, error: productError } = await supabase
+          .from('marketplace_items')
+          .select('*')
+          .eq('id', conversationData.product_id)
+          .single();
+        
+        if (!productError && productData) {
+          // Transform to match MarketplaceItem interface
+          setProduct({
+            id: productData.id,
+            title: productData.title,
+            description: productData.description || '',
+            price: productData.price !== null ? Number(productData.price) : null,
+            originalPrice: productData.original_price !== null ? Number(productData.original_price) : null,
+            images: [productData.image_url || 'https://images.unsplash.com/photo-1560343090-f0409e92791a'],
+            category: productData.category || 'Miscellaneous',
+            location: productData.location || 'Unknown',
+            user_id: productData.user_id,
+            image_url: productData.image_url,
+            listing_type: productData.listing_type
+          });
+        }
         
         // Fetch messages
         const { data: messagesData, error: messagesError } = await supabase
@@ -123,7 +110,7 @@ export default function Chat() {
         
         if (messagesError) throw messagesError;
         
-        setMessages(messagesData as Message[]);
+        setMessages(messagesData);
         
       } catch (error) {
         console.error('Error fetching conversation:', error);
@@ -141,7 +128,7 @@ export default function Chat() {
     
     // Subscribe to new messages
     const channel = supabase
-      .channel('public:messages')
+      .channel('chat-changes')
       .on(
         'postgres_changes',
         {
@@ -151,13 +138,32 @@ export default function Chat() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          setMessages((current) => [...current, payload.new as Message]);
+          const newMessage = payload.new as Message;
+          setMessages((current) => [...current, newMessage]);
+        }
+      )
+      .subscribe();
+    
+    // Update conversation timestamp when new messages arrive
+    const conversationChannel = supabase
+      .channel('conversation-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          setConversation(payload.new as Conversation);
         }
       )
       .subscribe();
     
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(conversationChannel);
     };
   }, [conversationId, user, toast]);
   
@@ -208,6 +214,14 @@ export default function Chat() {
         });
       
       if (messageError) throw messageError;
+      
+      // Update conversation timestamp to sort conversations by latest message
+      const { error: updateError } = await supabase
+        .from('conversations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', conversationId);
+      
+      if (updateError) console.error('Error updating conversation timestamp:', updateError);
       
       // Reset the message and attachment
       setMessage("");
@@ -281,11 +295,54 @@ export default function Chat() {
       });
   };
   
+  if (!user) {
+    return (
+      <Layout>
+        <div className="container py-8 flex flex-col items-center justify-center min-h-[60vh]">
+          <h2 className="text-xl font-semibold mb-4">Please sign in to view conversations</h2>
+          <Button onClick={() => navigate('/auth')}>
+            Sign In
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
+  
   if (isLoading) {
     return (
       <Layout>
-        <div className="container py-8 flex justify-center items-center min-h-[60vh]">
-          <p>Loading conversation...</p>
+        <div className="container py-8">
+          <div className="flex flex-col h-[calc(100vh-240px)] md:h-[calc(100vh-200px)] bg-background rounded-lg border shadow">
+            <div className="p-4 border-b flex items-center">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="ml-3 flex-1">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-4 w-32 mt-1" />
+              </div>
+            </div>
+            <div className="p-3 bg-muted/50 border-b flex items-center">
+              <Skeleton className="h-10 w-10 rounded mr-2" />
+              <Skeleton className="h-5 w-40" />
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {[1, 2, 3].map(i => (
+                <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[80%] ${i % 2 === 0 ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
+                    <Skeleton className="h-4 w-40" />
+                    <Skeleton className="h-4 w-20 mt-2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="p-3 border-t">
+              <div className="flex items-end gap-2">
+                <Skeleton className="flex-1 h-20" />
+                <Skeleton className="h-10 w-10 rounded" />
+                <Skeleton className="h-10 w-10 rounded" />
+                <Skeleton className="h-10 w-10 rounded" />
+              </div>
+            </div>
+          </div>
         </div>
       </Layout>
     );
@@ -296,6 +353,9 @@ export default function Chat() {
       <Layout>
         <div className="container py-8 flex flex-col items-center justify-center min-h-[60vh]">
           <h2 className="text-xl font-semibold mb-4">Conversation not found</h2>
+          <p className="text-muted-foreground mb-4 text-center">
+            This conversation may have been deleted or you may not have permission to view it.
+          </p>
           <Button onClick={() => navigate('/marketplace')}>
             Back to Marketplace
           </Button>
@@ -325,9 +385,9 @@ export default function Chat() {
             </Avatar>
             
             <div className="ml-3 flex-1">
-              <h3 className="font-semibold">{otherUser.full_name || otherUser.username}</h3>
+              <h3 className="font-semibold">{otherUser.full_name || otherUser.username || 'User'}</h3>
               <p className="text-xs text-muted-foreground">
-                About {product?.title}
+                About {product?.title || 'Product'}
               </p>
             </div>
             
@@ -338,19 +398,24 @@ export default function Chat() {
             </div>
           </div>
           
-          {/* Product summary (optional) */}
-          <div className="p-3 bg-muted/50 border-b flex items-center">
-            <div className="h-10 w-10 rounded overflow-hidden mr-2">
-              <img 
-                src={product?.image} 
-                alt={product?.title} 
-                className="h-full w-full object-cover"
-              />
+          {/* Product summary */}
+          {product && (
+            <div className="p-3 bg-muted/50 border-b flex items-center">
+              <div className="h-10 w-10 rounded overflow-hidden mr-2">
+                <img 
+                  src={product.image_url || product.images?.[0] || 'https://images.unsplash.com/photo-1560343090-f0409e92791a'} 
+                  alt={product.title} 
+                  className="h-full w-full object-cover"
+                />
+              </div>
+              <div>
+                <p className="text-sm font-medium">{product.title}</p>
+                {product.price !== null && (
+                  <p className="text-xs">${product.price}</p>
+                )}
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">{product?.title}</p>
-            </div>
-          </div>
+          )}
           
           {/* Messages container */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -359,7 +424,7 @@ export default function Chat() {
                 <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-medium text-lg">Start the conversation</h3>
                 <p className="text-muted-foreground">
-                  No messages yet. Say hello to {otherUser.full_name || otherUser.username}!
+                  No messages yet. Say hello to {otherUser.full_name || otherUser.username || 'User'}!
                 </p>
               </div>
             ) : (
