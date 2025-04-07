@@ -3,12 +3,11 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
 import { Button } from "@/components/ui/button";
-import { Package, RefreshCw, Gift, Search, Filter, Plus } from "lucide-react";
+import { Package, RefreshCw, Gift, Search, Filter, Plus, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import MarketplaceItemCard from "@/components/marketplace/MarketplaceItemCard";
 import NewItemDialog from "@/components/marketplace/NewItemDialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
 
 export default function Marketplace() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'sell' | 'exchange' | 'giveaway'>('all');
@@ -47,7 +46,14 @@ export default function Marketplace() {
       if (activeFilter !== 'all') {
         // Convert first letter to uppercase for proper comparison
         const filterType = activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
-        query = query.eq('listing_type', filterType);
+        
+        if (activeFilter === 'sell') {
+          query = query.eq('listing_type', 'Offer');
+        } else if (activeFilter === 'exchange') {
+          query = query.eq('listing_type', 'Exchange');
+        } else if (activeFilter === 'giveaway') {
+          query = query.eq('listing_type', 'Donation');
+        }
       }
       
       const { data, error: fetchError } = await query;
@@ -75,7 +81,13 @@ export default function Marketplace() {
             avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956", // Default avatar
             rating: 5.0,
             id: item.user_id
-          }
+          },
+          // Add the original fields to ensure compatibility with SQL data format
+          user_id: item.user_id,
+          image_url: item.image_url,
+          original_price: item.original_price,
+          created_at: item.created_at,
+          listing_type: item.listing_type
         }));
         
         setMarketplaceItems(formattedItems);

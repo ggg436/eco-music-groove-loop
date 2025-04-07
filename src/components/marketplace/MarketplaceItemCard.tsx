@@ -9,25 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 interface MarketplaceItemProps {
-  item: {
-    id: number;
-    title: string;
-    description: string;
-    price: number | null;
-    originalPrice: number | null;
-    images: string[];
-    category: string;
-    location: string;
-    distance: string;
-    listingType: 'sell' | 'exchange' | 'giveaway';
-    createdAt: Date;
-    user: {
-      name: string;
-      avatar: string;
-      rating: number;
-      id?: string;
-    }
-  }
+  item: MarketplaceItem;
 }
 
 export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
@@ -36,8 +18,12 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
   const { toast } = useToast();
 
   const getListingBadge = () => {
-    switch (item.listingType) {
+    const listingType = item.listingType || item.listing_type || 'sell';
+    
+    switch (listingType) {
       case 'sell':
+      case 'Sell':
+      case 'Offer':
         return (
           <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-sm text-primary-foreground px-2 py-1 rounded-full text-xs font-medium flex items-center">
             <Package className="mr-1 h-3 w-3 text-primary" />
@@ -45,6 +31,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
           </div>
         );
       case 'exchange':
+      case 'Exchange':
         return (
           <div className="absolute top-3 left-3 bg-orange-500/80 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
             <RefreshCw className="mr-1 h-3 w-3" />
@@ -52,10 +39,19 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
           </div>
         );
       case 'giveaway':
+      case 'Giveaway':
+      case 'Donation':
         return (
           <div className="absolute top-3 left-3 bg-green-500/80 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-medium flex items-center">
             <Gift className="mr-1 h-3 w-3" />
             Free
+          </div>
+        );
+      default:
+        return (
+          <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-sm text-primary-foreground px-2 py-1 rounded-full text-xs font-medium flex items-center">
+            <Package className="mr-1 h-3 w-3 text-primary" />
+            For Sale
           </div>
         );
     }
@@ -67,7 +63,9 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
       return;
     }
     
-    if (user.id === item.user.id) {
+    const sellerId = item.user?.id || item.user_id;
+    
+    if (user.id === sellerId) {
       toast({
         title: "Cannot message yourself",
         description: "This is your own listing",
@@ -75,7 +73,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
       return;
     }
     
-    if (!item.user.id) {
+    if (!sellerId) {
       toast({
         variant: "destructive",
         title: "Error",
@@ -91,7 +89,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
         .select('id')
         .eq('product_id', item.id)
         .eq('buyer_id', user.id)
-        .eq('seller_id', item.user.id);
+        .eq('seller_id', sellerId);
       
       if (queryError) throw queryError;
       
@@ -106,7 +104,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
         .from('conversations')
         .insert({
           product_id: item.id,
-          seller_id: item.user.id,
+          seller_id: sellerId,
           buyer_id: user.id,
         })
         .select('id')
@@ -126,11 +124,30 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
     }
   };
 
+  // Get the image URL, handling different formats
+  const imageUrl = item.images && item.images.length > 0 
+    ? item.images[0] 
+    : item.image_url || 'https://images.unsplash.com/photo-1560343090-f0409e92791a';
+
+  // Handle missing description
+  const description = item.description || '';
+
+  // Handle user information, with fallbacks
+  const userName = item.user?.name || 'User';
+  const userAvatar = item.user?.avatar || 'https://images.unsplash.com/photo-1580489944761-15a19d654956';
+  const userRating = item.user?.rating || 5.0;
+
+  // Handle location info
+  const location = item.location || item.distance || 'Nearby';
+
+  // Handle category
+  const category = item.category || 'Miscellaneous';
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all group">
       <div className="relative aspect-square overflow-hidden">
         <img 
-          src={item.images[0]} 
+          src={imageUrl} 
           alt={item.title}
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
@@ -139,17 +156,17 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
       
       <CardContent className="p-4">
         <div className="mb-2">
-          <div className="text-xs text-muted-foreground">{item.category}</div>
+          <div className="text-xs text-muted-foreground">{category}</div>
           <h3 className="font-medium line-clamp-1">{item.title}</h3>
         </div>
         
         <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-          {item.description}
+          {description}
         </p>
         
         <div className="flex items-center text-xs text-muted-foreground">
           <MapPin className="h-3 w-3 mr-1" />
-          <span>{item.distance}</span>
+          <span>{location}</span>
         </div>
       </CardContent>
       
@@ -158,12 +175,12 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
           <div className="flex items-center gap-2">
             <div className="h-6 w-6 rounded-full overflow-hidden">
               <img 
-                src={item.user.avatar} 
-                alt={item.user.name}
+                src={userAvatar} 
+                alt={userName}
                 className="h-full w-full object-cover"
               />
             </div>
-            <span className="text-xs">{item.user.name}</span>
+            <span className="text-xs">{userName}</span>
           </div>
           
           <div className="flex items-center">
@@ -172,11 +189,11 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
                 key={i}
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
-                fill={i < Math.floor(item.user.rating) ? "currentColor" : "none"}
+                fill={i < Math.floor(userRating) ? "currentColor" : "none"}
                 stroke="currentColor"
                 className={cn(
                   "h-3 w-3",
-                  i < Math.floor(item.user.rating) ? "text-yellow-500" : "text-gray-300"
+                  i < Math.floor(userRating) ? "text-yellow-500" : "text-gray-300"
                 )}
               >
                 <path
@@ -187,7 +204,7 @@ export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
                 />
               </svg>
             ))}
-            <span className="ml-1 text-xs">{item.user.rating.toFixed(1)}</span>
+            <span className="ml-1 text-xs">{userRating.toFixed(1)}</span>
           </div>
         </div>
         
