@@ -21,7 +21,7 @@ declare interface MarketplaceItem {
   image_url?: string;
   original_price?: number | null;
   created_at?: string;
-  listing_type?: 'sell' | 'exchange' | 'giveaway' | 'Sell' | 'Exchange' | 'Giveaway' | 'Offer' | 'Donation';
+  listing_type?: string; // Changed from enum to string to accept any value from the database
 }
 
 // Add a type for the RPC function parameters

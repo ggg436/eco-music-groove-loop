@@ -74,7 +74,7 @@ export default function Marketplace() {
           category: item.category || 'Miscellaneous',
           location: item.location || 'Unknown',
           distance: "Nearby", // We'll use a placeholder for now
-          listingType: (item.listing_type?.toLowerCase() as 'sell' | 'exchange' | 'giveaway') || 'sell',
+          listingType: getNormalizedListingType(item.listing_type),
           createdAt: new Date(item.created_at),
           user: {
             name: "User", // We'll use a placeholder name for now
@@ -98,6 +98,18 @@ export default function Marketplace() {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Helper function to normalize listing type for display
+  const getNormalizedListingType = (type: string | undefined): 'sell' | 'exchange' | 'giveaway' => {
+    if (!type) return 'sell';
+    
+    const lowerType = type.toLowerCase();
+    if (lowerType === 'offer' || lowerType === 'sell') return 'sell';
+    if (lowerType === 'exchange') return 'exchange';
+    if (lowerType === 'donation' || lowerType === 'giveaway') return 'giveaway';
+    
+    return 'sell'; // Default case
   };
   
   // Trigger re-fetch when filter changes
