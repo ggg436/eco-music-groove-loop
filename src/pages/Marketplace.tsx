@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import SectionHeading from "@/components/common/SectionHeading";
 import { Button } from "@/components/ui/button";
@@ -6,89 +7,93 @@ import { Package, RefreshCw, Gift, Search, Filter, Plus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import MarketplaceItemCard from "@/components/marketplace/MarketplaceItemCard";
 import NewItemDialog from "@/components/marketplace/NewItemDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export default function Marketplace() {
   const [activeFilter, setActiveFilter] = useState<'all' | 'sell' | 'exchange' | 'giveaway'>('all');
+  const [marketplaceItems, setMarketplaceItems] = useState<MarketplaceItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  // Sample marketplace items
-  const marketplaceItems = [
-    {
-      id: 1,
-      title: "Wooden Desk Chair",
-      description: "Lightly used wooden chair, perfect condition",
-      price: 25,
-      originalPrice: 80,
-      images: ["https://images.unsplash.com/photo-1592078615290-033ee584dd43"],
-      category: "Furniture",
-      location: "Brooklyn, NY",
-      distance: "1.2 miles away",
-      listingType: "sell" as const,
-      createdAt: new Date("2023-01-15"),
-      user: {
-        name: "Sarah K.",
-        avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956",
-        rating: 4.8
+  useEffect(() => {
+    fetchMarketplaceItems();
+  }, []);
+
+  const fetchMarketplaceItems = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Build the query
+      let query = supabase
+        .from('marketplace_items')
+        .select(`
+          id, 
+          title, 
+          description, 
+          price, 
+          original_price, 
+          category, 
+          image_url, 
+          location, 
+          listing_type, 
+          created_at,
+          user_id
+        `)
+        .order('created_at', { ascending: false });
+      
+      // Apply filter if not 'all'
+      if (activeFilter !== 'all') {
+        // Convert first letter to uppercase for proper comparison
+        const filterType = activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
+        query = query.eq('listing_type', filterType);
       }
-    },
-    {
-      id: 2,
-      title: "Plant Pots (Set of 3)",
-      description: "Ceramic plant pots, different sizes. Will trade for gardening tools.",
-      price: null,
-      originalPrice: null,
-      images: ["https://images.unsplash.com/photo-1485955900006-10f4d324d411"],
-      category: "Home & Garden",
-      location: "Queens, NY",
-      distance: "3.5 miles away",
-      listingType: "exchange" as const,
-      createdAt: new Date("2023-01-10"),
-      user: {
-        name: "Michael T.",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
-        rating: 4.5
+      
+      const { data, error: fetchError } = await query;
+      
+      if (fetchError) {
+        throw fetchError;
       }
-    },
-    {
-      id: 3,
-      title: "Books for Children",
-      description: "Collection of children's books, free to a good home",
-      price: null,
-      originalPrice: null,
-      images: ["https://images.unsplash.com/photo-1512820790803-83ca734da794"],
-      category: "Books",
-      location: "Manhattan, NY",
-      distance: "0.7 miles away",
-      listingType: "giveaway" as const,
-      createdAt: new Date("2023-01-05"),
-      user: {
-        name: "Leila H.",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80",
-        rating: 4.9
+      
+      if (data) {
+        // Transform the data to match our MarketplaceItem interface
+        const formattedItems: MarketplaceItem[] = data.map(item => ({
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          price: item.price !== null ? Number(item.price) : null,
+          originalPrice: item.original_price !== null ? Number(item.original_price) : null,
+          images: [item.image_url || 'https://images.unsplash.com/photo-1560343090-f0409e92791a'],
+          category: item.category || 'Miscellaneous',
+          location: item.location || 'Unknown',
+          distance: "Nearby", // We'll use a placeholder for now
+          listingType: (item.listing_type?.toLowerCase() as 'sell' | 'exchange' | 'giveaway') || 'sell',
+          createdAt: new Date(item.created_at),
+          user: {
+            name: "User", // We'll use a placeholder name for now
+            avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956", // Default avatar
+            rating: 5.0,
+            id: item.user_id
+          }
+        }));
+        
+        setMarketplaceItems(formattedItems);
       }
-    },
-    {
-      id: 4,
-      title: "Reusable Glass Bottles",
-      description: "6 glass bottles, perfect for homemade juices",
-      price: 12,
-      originalPrice: 30,
-      images: ["https://images.unsplash.com/photo-1610147323479-a7fb11ffd5dd"],
-      category: "Kitchen",
-      location: "Bronx, NY",
-      distance: "5.1 miles away",
-      listingType: "sell" as const,
-      createdAt: new Date("2023-01-02"),
-      user: {
-        name: "James R.",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e",
-        rating: 4.6
-      }
+    } catch (err: any) {
+      console.error('Error fetching marketplace items:', err);
+      setError(err.message || 'Failed to fetch marketplace items');
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
   
-  const filteredItems = activeFilter === 'all' 
-    ? marketplaceItems 
-    : marketplaceItems.filter(item => item.listingType === activeFilter);
+  // Trigger re-fetch when filter changes
+  useEffect(() => {
+    fetchMarketplaceItems();
+  }, [activeFilter]);
+
+  const filteredItems = marketplaceItems;
 
   return (
     <Layout>
@@ -106,7 +111,7 @@ export default function Marketplace() {
         
         {/* Filters */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button 
               variant={activeFilter === 'all' ? 'default' : 'outline'} 
               size="sm" 
@@ -155,14 +160,39 @@ export default function Marketplace() {
           </div>
         </div>
         
-        {/* Marketplace grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredItems.map((item) => (
-            <MarketplaceItemCard key={item.id} item={item} />
-          ))}
-        </div>
+        {/* Loading state */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Loading items...</span>
+          </div>
+        )}
         
-        {filteredItems.length === 0 && (
+        {/* Error state */}
+        {error && (
+          <Card className="mt-8">
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <p className="text-destructive text-center mb-4">
+                {error}
+              </p>
+              <Button variant="outline" onClick={fetchMarketplaceItems}>
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        
+        {/* Marketplace grid */}
+        {!isLoading && !error && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredItems.map((item) => (
+              <MarketplaceItemCard key={item.id} item={item} />
+            ))}
+          </div>
+        )}
+        
+        {/* Empty state */}
+        {!isLoading && !error && filteredItems.length === 0 && (
           <Card className="mt-8">
             <CardContent className="flex flex-col items-center justify-center py-16">
               <p className="text-muted-foreground text-center mb-4">

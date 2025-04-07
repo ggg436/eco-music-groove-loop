@@ -87,6 +87,17 @@ export default function MarketplaceItemForm() {
 
       console.log('File uploaded successfully. Public URL:', publicUrl);
 
+      // Map the UI listing type to the database value
+      // Note: In the UI we use "Offer", but in the database we store it as "sell"
+      let dbListingType = listingType;
+      if (listingType === "Offer") {
+        dbListingType = "sell";
+      } else if (listingType === "Exchange") {
+        dbListingType = "exchange";
+      } else if (listingType === "Donation") {
+        dbListingType = "giveaway";
+      }
+
       // 2. Save item details to Supabase database
       const { error: dbError } = await supabase
         .from('marketplace_items')
@@ -98,7 +109,7 @@ export default function MarketplaceItemForm() {
           original_price: originalPrice,
           category,
           location,
-          listing_type: listingType,
+          listing_type: dbListingType,
           image_url: publicUrl,
         });
 
@@ -108,7 +119,20 @@ export default function MarketplaceItemForm() {
 
       toast({
         title: "Listing added successfully!",
+        description: "Your item has been added to the marketplace.",
       });
+      
+      // Reset form after successful submission
+      setTitle("");
+      setDescription("");
+      setPrice(undefined);
+      setOriginalPrice(undefined);
+      setCategory("");
+      setLocation("");
+      setListingType("Offer");
+      setImage(null);
+      
+      // Send the user to the marketplace to see their listing
       navigate('/marketplace');
 
     } catch (error: any) {
