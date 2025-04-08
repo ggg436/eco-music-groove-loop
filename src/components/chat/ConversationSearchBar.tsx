@@ -1,6 +1,7 @@
 
 import { Search, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ConversationSearchBarProps {
   searchQuery: string;
@@ -15,6 +16,8 @@ export default function ConversationSearchBar({
   sortBy,
   setSortBy
 }: ConversationSearchBarProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <div className="flex items-center gap-3 w-full md:w-auto">
       <div className="relative flex-1 md:w-[250px]">
@@ -30,11 +33,12 @@ export default function ConversationSearchBar({
       
       <Button
         variant="outline"
-        size="sm"
+        size={isMobile ? "icon" : "sm"}
         onClick={() => setSortBy(sortBy === 'newest' ? 'oldest' : 'newest')}
+        title={sortBy === 'newest' ? 'Sort: Newest first' : 'Sort: Oldest first'}
       >
         <ArrowUpDown className="h-4 w-4 mr-1.5" />
-        {sortBy === 'newest' ? 'Newest' : 'Oldest'}
+        {!isMobile && (sortBy === 'newest' ? 'Newest' : 'Oldest')}
       </Button>
     </div>
   );

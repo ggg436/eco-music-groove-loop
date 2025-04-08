@@ -115,15 +115,15 @@ export default function Chats() {
     
     fetchConversations();
     
-    // Set up realtime subscription for new messages
+    // Set up realtime subscription for new messages - use a unique channel name per user
     const messagesChannel = supabase
-      .channel('messages-channel')
+      .channel(`user-messages-${user.id}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
+          table: 'messages'
         },
         (payload) => {
           if (payload.new && payload.new.sender_id !== user.id) {
@@ -134,15 +134,15 @@ export default function Chats() {
       )
       .subscribe();
     
-    // Set up realtime subscription for updated conversations
+    // Set up realtime subscription for updated conversations - use a unique channel name per user
     const conversationsChannel = supabase
-      .channel('conversations-channel')
+      .channel(`user-conversations-${user.id}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'conversations',
+          table: 'conversations'
         },
         () => {
           fetchConversations();

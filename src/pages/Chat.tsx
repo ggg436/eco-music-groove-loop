@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -16,6 +15,7 @@ import AttachmentPreview from "@/components/chat/AttachmentPreview";
 import LocationPicker from "@/components/chat/LocationPicker";
 import MessageSound from "@/components/chat/MessageSound";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Helper function to transform Supabase location format to Message location format
 const transformLocation = (location: any): { lat: number; lng: number; address?: string } | undefined => {
@@ -38,6 +38,7 @@ export default function Chat() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -162,9 +163,9 @@ export default function Chat() {
     
     fetchConversation();
     
-    // Subscribe to new messages
-    const channel = supabase
-      .channel('chat-changes')
+    // Subscribe to new messages using the proper channel name format
+    const messageChannel = supabase
+      .channel(`messages-${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -199,7 +200,7 @@ export default function Chat() {
     
     // Update conversation timestamp when new messages arrive
     const conversationChannel = supabase
-      .channel('conversation-updates')
+      .channel(`conversation-${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -215,15 +216,10 @@ export default function Chat() {
       .subscribe();
     
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messageChannel);
       supabase.removeChannel(conversationChannel);
     };
   }, [conversationId, user, toast]);
-  
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
