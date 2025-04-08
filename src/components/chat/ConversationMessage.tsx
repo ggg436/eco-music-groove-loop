@@ -4,29 +4,10 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { MapPin } from "lucide-react";
 
-interface MessageLocation {
-  latitude: number;
-  longitude: number;
-  address: string;
-}
-
 interface MessageProps {
-  message: {
-    id: string;
-    content: string | null;
-    attachment_url: string | null;
-    attachment_type: string | null;
-    location: MessageLocation | null;
-    created_at: string;
-    sender_id: string;
-  };
+  message: Message;
   isOwn: boolean;
-  otherUser: {
-    id: string;
-    avatar_url: string | null;
-    full_name: string | null;
-    username: string | null;
-  };
+  otherUser: Profile | null;
   currentUser: any;
 }
 
@@ -77,9 +58,9 @@ export default function ConversationMessage({ message, isOwn, otherUser, current
           <MapPin className="h-4 w-4 mr-1" />
           <span className="font-medium">Location shared</span>
         </div>
-        <p className="text-xs text-muted-foreground">{message.location.address}</p>
+        <p className="text-xs text-muted-foreground">{message.location.address || 'Location'}</p>
         <a 
-          href={`https://www.google.com/maps/search/?api=1&query=${message.location.latitude},${message.location.longitude}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${message.location.lat},${message.location.lng}`}
           target="_blank" 
           rel="noopener noreferrer"
           className="text-xs text-primary mt-1 block"
@@ -97,7 +78,7 @@ export default function ConversationMessage({ message, isOwn, otherUser, current
       "flex gap-2 max-w-[80%]",
       isOwn ? "ml-auto flex-row-reverse" : ""
     )}>
-      {!isOwn && (
+      {!isOwn && otherUser && (
         <Avatar className="h-8 w-8">
           <AvatarImage src={otherUser.avatar_url || undefined} alt={otherUser.username || "User"} />
           <AvatarFallback>{otherUser.full_name?.charAt(0) || otherUser.username?.charAt(0) || "U"}</AvatarFallback>

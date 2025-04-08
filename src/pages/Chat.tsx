@@ -16,6 +16,22 @@ import AttachmentPreview from "@/components/chat/AttachmentPreview";
 import LocationPicker from "@/components/chat/LocationPicker";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Helper function to transform Supabase location format to Message location format
+const transformLocation = (location: any): { lat: number; lng: number; address?: string } | undefined => {
+  if (!location) return undefined;
+  
+  // Handle different possible formats of location data
+  if (typeof location === 'object') {
+    return {
+      lat: location.latitude || location.lat || 0,
+      lng: location.longitude || location.lng || 0,
+      address: location.address || ''
+    };
+  }
+  
+  return undefined;
+};
+
 export default function Chat() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
@@ -110,7 +126,19 @@ export default function Chat() {
         
         if (messagesError) throw messagesError;
         
-        setMessages(messagesData);
+        // Transform messages to match our Message interface
+        const transformedMessages: Message[] = messagesData.map((msg) => ({
+          id: msg.id,
+          conversation_id: msg.conversation_id,
+          sender_id: msg.sender_id,
+          content: msg.content || undefined,
+          attachment_url: msg.attachment_url || undefined,
+          attachment_type: msg.attachment_type || undefined,
+          location: transformLocation(msg.location),
+          created_at: msg.created_at
+        }));
+        
+        setMessages(transformedMessages);
         
       } catch (error) {
         console.error('Error fetching conversation:', error);
@@ -138,8 +166,18 @@ export default function Chat() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const newMessage = payload.new as Message;
-          setMessages((current) => [...current, newMessage]);
+          const newMessage = payload.new as any;
+          const transformedMessage: Message = {
+            id: newMessage.id,
+            conversation_id: newMessage.conversation_id,
+            sender_id: newMessage.sender_id,
+            content: newMessage.content || undefined,
+            attachment_url: newMessage.attachment_url || undefined,
+            attachment_type: newMessage.attachment_type || undefined,
+            location: transformLocation(newMessage.location),
+            created_at: newMessage.created_at
+          };
+          setMessages((current) => [...current, transformedMessage]);
         }
       )
       .subscribe();
