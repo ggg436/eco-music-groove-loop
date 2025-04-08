@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ConversationMessage from "@/components/chat/ConversationMessage";
 import AttachmentPreview from "@/components/chat/AttachmentPreview";
 import LocationPicker from "@/components/chat/LocationPicker";
+import MessageSound from "@/components/chat/MessageSound";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Helper function to transform Supabase location format to Message location format
@@ -45,6 +46,8 @@ export default function Chat() {
   const [otherUser, setOtherUser] = useState<Profile | null>(null);
   const [product, setProduct] = useState<MarketplaceItem | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [playNotification, setPlayNotification] = useState(false);
+  const [lastMessageSenderId, setLastMessageSenderId] = useState<string | null>(null);
   const [attachment, setAttachment] = useState<{
     file: File | null;
     previewUrl: string | null;
@@ -140,6 +143,11 @@ export default function Chat() {
         
         setMessages(transformedMessages);
         
+        // Set last message sender ID for notification
+        if (transformedMessages.length > 0) {
+          setLastMessageSenderId(transformedMessages[transformedMessages.length - 1].sender_id);
+        }
+        
       } catch (error) {
         console.error('Error fetching conversation:', error);
         toast({
@@ -177,6 +185,13 @@ export default function Chat() {
             location: transformLocation(newMessage.location),
             created_at: newMessage.created_at
           };
+          
+          // Check if the message is from the other user
+          if (newMessage.sender_id !== user.id) {
+            setPlayNotification(true);
+          }
+          
+          setLastMessageSenderId(newMessage.sender_id);
           setMessages((current) => [...current, transformedMessage]);
         }
       )
@@ -333,6 +348,10 @@ export default function Chat() {
       });
   };
   
+  const handleNotificationPlayed = () => {
+    setPlayNotification(false);
+  };
+  
   if (!user) {
     return (
       <Layout>
@@ -404,6 +423,9 @@ export default function Chat() {
   
   return (
     <Layout>
+      {/* Message notification sound */}
+      <MessageSound play={playNotification} onPlayed={handleNotificationPlayed} />
+      
       <div className="container py-4 md:py-8">
         <div className="flex flex-col h-[calc(100vh-240px)] md:h-[calc(100vh-200px)] bg-background rounded-lg border shadow">
           {/* Chat header */}
