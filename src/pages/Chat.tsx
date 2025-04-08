@@ -17,11 +17,9 @@ import MessageSound from "@/components/chat/MessageSound";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Helper function to transform Supabase location format to Message location format
 const transformLocation = (location: any): { lat: number; lng: number; address?: string } | undefined => {
   if (!location) return undefined;
   
-  // Handle different possible formats of location data
   if (typeof location === 'object') {
     return {
       lat: location.latitude || location.lat || 0,
@@ -62,7 +60,6 @@ export default function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch conversation and messages
   useEffect(() => {
     if (!conversationId || !user) return;
     
@@ -70,7 +67,6 @@ export default function Chat() {
       try {
         setIsLoading(true);
         
-        // Fetch conversation details
         const { data: conversationData, error: conversationError } = await supabase
           .from('conversations')
           .select('*')
@@ -81,12 +77,10 @@ export default function Chat() {
         
         setConversation(conversationData);
         
-        // Determine the other user in the conversation
         const otherUserId = conversationData.seller_id === user.id 
           ? conversationData.buyer_id 
           : conversationData.seller_id;
         
-        // Fetch other user profile
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -97,7 +91,6 @@ export default function Chat() {
         
         setOtherUser(profileData);
         
-        // Fetch product details
         const { data: productData, error: productError } = await supabase
           .from('marketplace_items')
           .select('*')
@@ -105,7 +98,6 @@ export default function Chat() {
           .single();
         
         if (!productError && productData) {
-          // Transform to match MarketplaceItem interface
           setProduct({
             id: productData.id,
             title: productData.title,
@@ -121,7 +113,6 @@ export default function Chat() {
           });
         }
         
-        // Fetch messages
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('*')
@@ -130,7 +121,6 @@ export default function Chat() {
         
         if (messagesError) throw messagesError;
         
-        // Transform messages to match our Message interface
         const transformedMessages: Message[] = messagesData.map((msg) => ({
           id: msg.id,
           conversation_id: msg.conversation_id,
@@ -144,7 +134,6 @@ export default function Chat() {
         
         setMessages(transformedMessages);
         
-        // Set last message sender ID for notification
         if (transformedMessages.length > 0) {
           setLastMessageSenderId(transformedMessages[transformedMessages.length - 1].sender_id);
         }
@@ -163,9 +152,10 @@ export default function Chat() {
     
     fetchConversation();
     
-    // Subscribe to new messages using the proper channel name format
+    const channelName = `conversation-messages-${conversationId}`;
+    
     const messageChannel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -175,6 +165,13 @@ export default function Chat() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log('New message received:', payload);
+          
+          if (!payload.new) {
+            console.error('Message payload is missing the new property:', payload);
+            return;
+          }
+          
           const newMessage = payload.new as any;
           const transformedMessage: Message = {
             id: newMessage.id,
@@ -187,20 +184,39 @@ export default function Chat() {
             created_at: newMessage.created_at
           };
           
-          // Check if the message is from the other user
           if (newMessage.sender_id !== user.id) {
+            console.log('Playing notification for message from:', newMessage.sender_id);
             setPlayNotification(true);
           }
           
           setLastMessageSenderId(newMessage.sender_id);
-          setMessages((current) => [...current, transformedMessage]);
+          
+          setMessages((currentMessages) => {
+            const messageExists = currentMessages.some(msg => msg.id === transformedMessage.id);
+            if (messageExists) {
+              return currentMessages;
+            }
+            return [...currentMessages, transformedMessage];
+          });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Subscription status for channel ${channelName}:`, status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log(`Successfully subscribed to messages for conversation ${conversationId}`);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`Error subscribing to messages for conversation ${conversationId}`);
+          toast({
+            variant: "destructive",
+            title: "Connection Error",
+            description: "Unable to receive real-time messages. Please refresh the page.",
+          });
+        }
+      });
     
-    // Update conversation timestamp when new messages arrive
     const conversationChannel = supabase
-      .channel(`conversation-${conversationId}`)
+      .channel(`conversation-updates-${conversationId}`)
       .on(
         'postgres_changes',
         {
@@ -210,12 +226,16 @@ export default function Chat() {
           filter: `id=eq.${conversationId}`,
         },
         (payload) => {
+          console.log('Conversation updated:', payload);
           setConversation(payload.new as Conversation);
         }
       )
       .subscribe();
     
+    scrollToBottom();
+    
     return () => {
+      console.log('Cleaning up subscription channels');
       supabase.removeChannel(messageChannel);
       supabase.removeChannel(conversationChannel);
     };
@@ -229,7 +249,6 @@ export default function Chat() {
     if ((!message.trim() && !attachment.file) || !user || !conversationId) return;
     
     try {
-      // Handle file upload if there's an attachment
       let attachmentUrl = null;
       let attachmentType = null;
       
@@ -251,7 +270,6 @@ export default function Chat() {
         attachmentType = attachment.type;
       }
       
-      // Insert the message
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -264,7 +282,6 @@ export default function Chat() {
       
       if (messageError) throw messageError;
       
-      // Update conversation timestamp to sort conversations by latest message
       const { error: updateError } = await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
@@ -272,7 +289,6 @@ export default function Chat() {
       
       if (updateError) console.error('Error updating conversation timestamp:', updateError);
       
-      // Reset the message and attachment
       setMessage("");
       setAttachment({ file: null, previewUrl: null, type: null });
       
@@ -314,14 +330,12 @@ export default function Chat() {
   const handleLocationSelected = (location: { lat: number; lng: number; address: string }) => {
     if (!user?.id || !conversationId) return;
     
-    // Convert location to a JSON object to store in the database
     const locationData = {
       latitude: location.lat,
       longitude: location.lng,
       address: location.address,
     };
     
-    // Add location to the message
     supabase
       .from('messages')
       .insert({
@@ -419,12 +433,10 @@ export default function Chat() {
   
   return (
     <Layout>
-      {/* Message notification sound */}
       <MessageSound play={playNotification} onPlayed={handleNotificationPlayed} />
       
       <div className="container py-4 md:py-8">
         <div className="flex flex-col h-[calc(100vh-240px)] md:h-[calc(100vh-200px)] bg-background rounded-lg border shadow">
-          {/* Chat header */}
           <div className="p-4 border-b flex items-center">
             <Button 
               variant="ghost" 
@@ -454,7 +466,6 @@ export default function Chat() {
             </div>
           </div>
           
-          {/* Product summary */}
           {product && (
             <div className="p-3 bg-muted/50 border-b flex items-center">
               <div className="h-10 w-10 rounded overflow-hidden mr-2">
@@ -473,7 +484,6 @@ export default function Chat() {
             </div>
           )}
           
-          {/* Messages container */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -497,7 +507,6 @@ export default function Chat() {
             <div ref={messagesEndRef} />
           </div>
           
-          {/* Attachment preview */}
           {attachment.previewUrl && (
             <div className="p-3 border-t">
               <AttachmentPreview
@@ -509,7 +518,6 @@ export default function Chat() {
             </div>
           )}
           
-          {/* Location picker */}
           {showLocationPicker && (
             <div className="p-3 border-t">
               <LocationPicker
@@ -519,7 +527,6 @@ export default function Chat() {
             </div>
           )}
           
-          {/* Message input */}
           <div className="p-3 border-t">
             <div className="flex items-end gap-2">
               <div className="flex-1">

@@ -24,11 +24,18 @@ const MessageSound = ({ play, onPlayed }: MessageSoundProps) => {
       // Reset the audio to the beginning before playing
       audioRef.current.currentTime = 0;
       
-      audioRef.current.play()
-        .catch(error => {
-          console.error('Error playing notification sound:', error);
-          onPlayed(); // Still call callback even if sound fails
-        });
+      // Try playing the sound with better error handling
+      const playPromise = audioRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .catch(error => {
+            console.error('Error playing notification sound:', error);
+            // Still call the callback even if sound fails to play
+            // This prevents the sound from getting stuck in a "playing" state
+            onPlayed();
+          });
+      }
     }
     
     // Cleanup function

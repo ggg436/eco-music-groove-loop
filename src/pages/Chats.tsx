@@ -26,6 +26,7 @@ export default function Chats() {
     const fetchConversations = async () => {
       try {
         setIsLoading(true);
+        console.log('Fetching conversations for user:', user.id);
         
         const { data, error } = await supabase
           .from('conversations')
@@ -44,16 +45,23 @@ export default function Chats() {
         
         if (error) throw error;
         
+        console.log('Fetched conversations:', data?.length || 0);
+        
         const conversationsWithDetails: ConversationWithDetails[] = [];
         
-        for (const conv of data) {
+        for (const conv of data || []) {
           const otherUserId = conv.buyer_id === user.id ? conv.seller_id : conv.buyer_id;
           
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', otherUserId)
             .single();
+          
+          if (profileError) {
+            console.error('Error fetching profile for user:', otherUserId, profileError);
+            continue; // Skip this conversation but don't fail the whole process
+          }
           
           const { data: latestMessageData } = await supabase
             .from('messages')
@@ -100,6 +108,7 @@ export default function Chats() {
           });
         }
         
+        console.log('Processed conversations with details:', conversationsWithDetails.length);
         setConversations(conversationsWithDetails);
       } catch (error) {
         console.error('Error fetching conversations:', error);
@@ -115,9 +124,12 @@ export default function Chats() {
     
     fetchConversations();
     
-    // Set up realtime subscription for new messages - use a unique channel name per user
+    // Create a unique channel name for this user's messages
+    const channelName = `user-messages-${user.id}`;
+    
+    // Set up realtime subscription for new messages
     const messagesChannel = supabase
-      .channel(`user-messages-${user.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -126,15 +138,28 @@ export default function Chats() {
           table: 'messages'
         },
         (payload) => {
-          if (payload.new && payload.new.sender_id !== user.id) {
-            setPlayNotification(true);
+          console.log('New message detected:', payload);
+          
+          // Check if this message is for a conversation involving this user
+          if (payload.new) {
+            const messageData = payload.new as any;
+            
+            // Play notification sound if the message is sent to this user
+            if (messageData.sender_id !== user.id) {
+              console.log('Playing notification for new message');
+              setPlayNotification(true);
+            }
+            
+            // Refresh conversations to show the latest messages
+            fetchConversations();
           }
-          fetchConversations();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Subscription status for channel ${channelName}:`, status);
+      });
     
-    // Set up realtime subscription for updated conversations - use a unique channel name per user
+    // Set up realtime subscription for updated conversations
     const conversationsChannel = supabase
       .channel(`user-conversations-${user.id}`)
       .on(
@@ -144,13 +169,20 @@ export default function Chats() {
           schema: 'public',
           table: 'conversations'
         },
-        () => {
-          fetchConversations();
+        (payload) => {
+          console.log('Conversation updated:', payload);
+          
+          // Check if this conversation involves the current user
+          const conversation = payload.new as Conversation;
+          if (conversation.buyer_id === user.id || conversation.seller_id === user.id) {
+            fetchConversations();
+          }
         }
       )
       .subscribe();
     
     return () => {
+      console.log('Cleaning up subscription channels');
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };
