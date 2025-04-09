@@ -53,26 +53,41 @@ serve(async (req) => {
       }),
     });
 
+    // Check if the response is OK
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('DeepSeek API error:', errorData);
-      throw new Error(`DeepSeek API error: ${JSON.stringify(errorData)}`);
+      const errorText = await response.text();
+      console.error('DeepSeek API error response:', errorText);
+      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
     }
 
-    const result = await response.json();
-    console.log('DeepSeek API response received');
+    // Get the response as text first to debug
+    const responseText = await response.text();
+    console.log('DeepSeek API raw response:', responseText);
     
-    // Parse the JSON response from the AI
+    // Parse the JSON response from the text
+    let result;
+    try {
+      result = JSON.parse(responseText);
+      console.log('Successfully parsed response JSON');
+    } catch (parseError) {
+      console.error('Error parsing response as JSON:', parseError);
+      throw new Error(`Failed to parse response: ${parseError.message}`);
+    }
+    
+    // Parse the AI content as JSON
     let plantData;
     try {
       if (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) {
-        plantData = JSON.parse(result.choices[0].message.content);
+        const contentText = result.choices[0].message.content;
+        console.log('AI content to parse:', contentText);
+        plantData = JSON.parse(contentText);
         console.log('Successfully parsed plant data from API response');
       } else {
+        console.error('Invalid response structure:', result);
         throw new Error('Invalid response format from DeepSeek API');
       }
     } catch (error) {
-      console.error('Error parsing DeepSeek API response:', error, 'Response:', result);
+      console.error('Error parsing DeepSeek API response content:', error);
       plantData = {
         scientificName: "Unknown",
         commonName: "Unknown",

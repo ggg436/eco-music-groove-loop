@@ -89,19 +89,25 @@ export default function PlantIdentifier() {
         description: "Our AI is identifying your plant. This may take a moment.",
       });
       
-      const { data, error } = await supabase.functions.invoke('identify-plant', {
+      const { data, error: invocationError } = await supabase.functions.invoke('identify-plant', {
         body: { imageBase64 },
       });
       
-      if (error) {
-        throw new Error(`Function error: ${error.message}`);
+      if (invocationError) {
+        console.error("Function invocation error:", invocationError);
+        throw new Error(`Function error: ${invocationError.message}`);
       }
       
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response from plant identification service');
+      if (!data) {
+        throw new Error('No data returned from plant identification service');
       }
       
       console.log("Plant identification result:", data);
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
       setResult(data);
       
       toast({
@@ -127,6 +133,12 @@ export default function PlantIdentifier() {
     setResult(null);
     setError(null);
     setPhotoSource(null);
+  };
+  
+  const retryIdentification = () => {
+    if (image) {
+      identifyPlant(image);
+    }
   };
   
   if (!user) {
@@ -273,7 +285,7 @@ export default function PlantIdentifier() {
                         <Button 
                           variant="outline" 
                           className="mt-4" 
-                          onClick={() => identifyPlant(image)}
+                          onClick={retryIdentification}
                         >
                           Try Again
                         </Button>
