@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,49 +8,57 @@ import ConversationSearchBar from "@/components/chat/ConversationSearchBar";
 import ConversationEmptyState from "@/components/chat/ConversationEmptyState";
 import { getNormalizedListingType, filterConversations, sortConversations } from "@/components/chat/utils/conversationUtils";
 import MessageSound from "@/components/chat/MessageSound";
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
 
 export default function Chats() {
   const { user } = useAuth();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [playNotification, setPlayNotification] = useState(false);
   
-  useEffect(() => {
+  const fetchConversations = async () => {
     if (!user) return;
     
-    const fetchConversations = async () => {
-      try {
-        setIsLoading(true);
-        console.log('Fetching conversations for user:', user.id);
+    try {
+      setIsLoading(true);
+      setError(false);
+      console.log('Fetching conversations for user:', user.id);
+      
+      const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          product:product_id (
+            id, 
+            title, 
+            image_url,
+            price,
+            listing_type
+          )
+        `)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order('updated_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching conversations:', error);
+        setError(true);
+        throw error;
+      }
+      
+      console.log('Fetched conversations:', data?.length || 0);
+      
+      const conversationsWithDetails: ConversationWithDetails[] = [];
+      
+      for (const conv of data || []) {
+        const otherUserId = conv.buyer_id === user.id ? conv.seller_id : conv.buyer_id;
         
-        const { data, error } = await supabase
-          .from('conversations')
-          .select(`
-            *,
-            product:product_id (
-              id, 
-              title, 
-              image_url,
-              price,
-              listing_type
-            )
-          `)
-          .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-          .order('updated_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        console.log('Fetched conversations:', data?.length || 0);
-        
-        const conversationsWithDetails: ConversationWithDetails[] = [];
-        
-        for (const conv of data || []) {
-          const otherUserId = conv.buyer_id === user.id ? conv.seller_id : conv.buyer_id;
-          
+        try {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -63,13 +70,17 @@ export default function Chats() {
             continue; // Skip this conversation but don't fail the whole process
           }
           
-          const { data: latestMessageData } = await supabase
+          const { data: latestMessageData, error: messageError } = await supabase
             .from('messages')
             .select('*')
             .eq('conversation_id', conv.id)
             .order('created_at', { ascending: false })
             .limit(1)
             .single();
+          
+          if (messageError && messageError.code !== 'PGRST116') {
+            console.error('Error fetching latest message:', messageError);
+          }
             
           let latestMessage: Message | undefined;
           
@@ -106,28 +117,35 @@ export default function Chats() {
             product: product,
             latestMessage: latestMessage
           });
+        } catch (err) {
+          console.error('Error processing conversation details:', err);
+          // Continue with other conversations
         }
-        
-        console.log('Processed conversations with details:', conversationsWithDetails.length);
-        setConversations(conversationsWithDetails);
-      } catch (error) {
-        console.error('Error fetching conversations:', error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to load conversations",
-        });
-      } finally {
-        setIsLoading(false);
       }
-    };
+      
+      console.log('Processed conversations with details:', conversationsWithDetails.length);
+      setConversations(conversationsWithDetails);
+      setError(false);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      setError(true);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load conversations. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (!user) return;
     
     fetchConversations();
     
-    // Create a unique channel name for this user's messages
-    const channelName = `user-messages-${user.id}`;
+    const channelName = `user-messages-${user.id}-${Date.now()}`;
     
-    // Set up realtime subscription for new messages
     const messagesChannel = supabase
       .channel(channelName)
       .on(
@@ -140,17 +158,14 @@ export default function Chats() {
         (payload) => {
           console.log('New message detected:', payload);
           
-          // Check if this message is for a conversation involving this user
           if (payload.new) {
             const messageData = payload.new as any;
             
-            // Play notification sound if the message is sent to this user
             if (messageData.sender_id !== user.id) {
               console.log('Playing notification for new message');
               setPlayNotification(true);
             }
             
-            // Refresh conversations to show the latest messages
             fetchConversations();
           }
         }
@@ -159,9 +174,8 @@ export default function Chats() {
         console.log(`Subscription status for channel ${channelName}:`, status);
       });
     
-    // Set up realtime subscription for updated conversations
     const conversationsChannel = supabase
-      .channel(`user-conversations-${user.id}`)
+      .channel(`user-conversations-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -172,17 +186,23 @@ export default function Chats() {
         (payload) => {
           console.log('Conversation updated:', payload);
           
-          // Check if this conversation involves the current user
           const conversation = payload.new as Conversation;
           if (conversation.buyer_id === user.id || conversation.seller_id === user.id) {
             fetchConversations();
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Conversation subscription status: ${status}`);
+      });
+    
+    const intervalId = setInterval(() => {
+      console.log('Periodic refresh of conversations');
+      fetchConversations();
+    }, 60000);
     
     return () => {
-      console.log('Cleaning up subscription channels');
+      clearInterval(intervalId);
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };
@@ -190,6 +210,14 @@ export default function Chats() {
   
   const handleNotificationPlayed = () => {
     setPlayNotification(false);
+  };
+  
+  const handleRefresh = () => {
+    fetchConversations();
+    toast({
+      title: "Refreshing",
+      description: "Refreshing conversations list...",
+    });
   };
   
   if (!user) {
@@ -216,20 +244,41 @@ export default function Chats() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
           <h1 className="text-2xl font-bold mb-4 md:mb-0">Your Conversations</h1>
           
-          <ConversationSearchBar 
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            sortBy={sortBy}
-            setSortBy={setSortBy}
-          />
+          <div className="flex gap-2 items-center">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
+            <ConversationSearchBar 
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              sortBy={sortBy}
+              setSortBy={setSortBy}
+            />
+          </div>
         </div>
         
-        <ConversationList 
-          conversations={filteredAndSortedConversations}
-          isLoading={isLoading}
-          searchQuery={searchQuery}
-          user={user}
-        />
+        {error ? (
+          <ConversationEmptyState 
+            message="Failed to load conversations" 
+            buttonText="Try Again" 
+            buttonLink="/chats" 
+            isError={true}
+          />
+        ) : (
+          <ConversationList 
+            conversations={filteredAndSortedConversations}
+            isLoading={isLoading}
+            searchQuery={searchQuery}
+            user={user}
+          />
+        )}
       </div>
     </Layout>
   );
