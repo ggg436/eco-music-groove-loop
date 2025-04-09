@@ -33,10 +33,33 @@ export default function PlantIdentifier() {
     diseases?: string[];
     additional?: string;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Check if the file is an image
+    if (!file.type.startsWith('image/')) {
+      toast({
+        variant: "destructive",
+        title: "Invalid file type",
+        description: "Please upload an image file (JPEG, PNG, etc.)"
+      });
+      return;
+    }
+    
+    // Check if the file size is reasonable (under 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File too large",
+        description: "Please upload an image smaller than 5MB"
+      });
+      return;
+    }
+    
+    setError(null);
     
     // Process image preview
     const reader = new FileReader();
@@ -58,8 +81,14 @@ export default function PlantIdentifier() {
     try {
       setIsIdentifying(true);
       setResult(null);
+      setError(null);
       
       // Call our Supabase Edge Function for plant identification
+      toast({
+        title: "Analyzing plant...",
+        description: "Our AI is identifying your plant. This may take a moment.",
+      });
+      
       const { data, error } = await supabase.functions.invoke('identify-plant', {
         body: { imageBase64 },
       });
@@ -68,6 +97,11 @@ export default function PlantIdentifier() {
         throw new Error(`Function error: ${error.message}`);
       }
       
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid response from plant identification service');
+      }
+      
+      console.log("Plant identification result:", data);
       setResult(data);
       
       toast({
@@ -77,6 +111,7 @@ export default function PlantIdentifier() {
       
     } catch (error) {
       console.error("Error identifying plant:", error);
+      setError((error as Error).message || "Unknown error occurred");
       toast({
         variant: "destructive",
         title: "Identification failed",
@@ -90,6 +125,7 @@ export default function PlantIdentifier() {
   const resetIdentification = () => {
     setImage(null);
     setResult(null);
+    setError(null);
     setPhotoSource(null);
   };
   
@@ -226,6 +262,21 @@ export default function PlantIdentifier() {
                         <p className="text-muted-foreground">
                           Our AI is analyzing your plant. This may take a moment...
                         </p>
+                      </div>
+                    ) : error ? (
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+                        <p className="text-destructive font-medium mb-2">Identification Failed</p>
+                        <p className="text-muted-foreground text-center">
+                          We couldn't identify your plant. Please try again with a clearer image.
+                        </p>
+                        <Button 
+                          variant="outline" 
+                          className="mt-4" 
+                          onClick={() => identifyPlant(image)}
+                        >
+                          Try Again
+                        </Button>
                       </div>
                     ) : result ? (
                       <div className="space-y-6">

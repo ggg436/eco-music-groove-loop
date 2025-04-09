@@ -24,11 +24,13 @@ serve(async (req) => {
       ? imageBase64.split('base64,')[1]
       : imageBase64;
 
+    console.log('Calling DeepSeek API for plant identification...');
+    
     // Call DeepSeek API for plant identification
     const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('DEEPSEEK_API_KEY')}`,
+        'Authorization': `Bearer ${Deno.env.get('DEEPSEEK_API_KEY') || 'sk-8c56615617224fa2a5050c8d6f6b1075'}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -36,7 +38,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a plant identification expert. Analyze the image and provide detailed information about the plant including scientific name, common name, family, description, and care instructions including water, light, and soil requirements. Also mention common diseases and additional facts if possible. Format the response as JSON.'
+            content: 'You are a plant identification expert. Analyze the image and provide detailed information about the plant including scientific name, common name, family, description, and care instructions including water, light, and soil requirements. Also mention common diseases and additional facts if possible. Format the response as JSON with these fields: scientificName, commonName, family, description, care (object with water, light, soil), diseases (array), additional (string).'
           },
           {
             role: 'user',
@@ -53,16 +55,24 @@ serve(async (req) => {
 
     if (!response.ok) {
       const errorData = await response.json();
+      console.error('DeepSeek API error:', errorData);
       throw new Error(`DeepSeek API error: ${JSON.stringify(errorData)}`);
     }
 
     const result = await response.json();
+    console.log('DeepSeek API response received');
     
     // Parse the JSON response from the AI
     let plantData;
     try {
-      plantData = JSON.parse(result.choices[0].message.content);
+      if (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) {
+        plantData = JSON.parse(result.choices[0].message.content);
+        console.log('Successfully parsed plant data from API response');
+      } else {
+        throw new Error('Invalid response format from DeepSeek API');
+      }
     } catch (error) {
+      console.error('Error parsing DeepSeek API response:', error, 'Response:', result);
       plantData = {
         scientificName: "Unknown",
         commonName: "Unknown",
@@ -72,7 +82,8 @@ serve(async (req) => {
           water: "N/A",
           light: "N/A",
           soil: "N/A"
-        }
+        },
+        diseases: []
       };
     }
 
@@ -84,7 +95,19 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error in identify-plant function:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        scientificName: "Error",
+        commonName: "Error Processing Image",
+        family: "Unknown",
+        description: "We encountered an error processing your plant image. Please try again with a clearer photo.",
+        care: {
+          water: "N/A",
+          light: "N/A",
+          soil: "N/A"
+        },
+        diseases: []
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
