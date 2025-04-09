@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -30,17 +31,12 @@ export default function Chats() {
       setError(false);
       console.log('Fetching conversations for user:', user.id);
       
+      // Modified query to NOT use the dot notation which was causing the foreign key error
       const { data, error } = await supabase
         .from('conversations')
         .select(`
           *,
-          product:product_id (
-            id, 
-            title, 
-            image_url,
-            price,
-            listing_type
-          )
+          product_id
         `)
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .order('updated_at', { ascending: false });
@@ -97,17 +93,26 @@ export default function Chats() {
             };
           }
           
+          // Get product information separately since dot notation was causing issues
           let product: MarketplaceItem | null = null;
           
-          if (conv.product && typeof conv.product === 'object') {
-            product = {
-              id: (conv.product as any).id || 0,
-              title: (conv.product as any).title || '',
-              price: (conv.product as any).price !== null ? Number((conv.product as any).price) : null,
-              images: (conv.product as any).image_url ? [(conv.product as any).image_url] : [],
-              listingType: getNormalizedListingType((conv.product as any).listing_type),
-              image_url: (conv.product as any).image_url
-            };
+          if (conv.product_id) {
+            const { data: productData, error: productError } = await supabase
+              .from('marketplace_items')
+              .select('*')
+              .eq('id', conv.product_id)
+              .single();
+            
+            if (!productError && productData) {
+              product = {
+                id: productData.id,
+                title: productData.title || '',
+                price: productData.price !== null ? Number(productData.price) : null,
+                images: productData.image_url ? [productData.image_url] : [],
+                listingType: getNormalizedListingType(productData.listing_type),
+                image_url: productData.image_url
+              };
+            }
           }
           
           conversationsWithDetails.push({
@@ -268,7 +273,7 @@ export default function Chats() {
           <ConversationEmptyState 
             message="Failed to load conversations" 
             buttonText="Try Again" 
-            buttonLink="/chats" 
+            buttonAction={fetchConversations}
             isError={true}
           />
         ) : (
