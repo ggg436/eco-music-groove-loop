@@ -20,9 +20,14 @@ const MessagesContainer = ({ messages, otherUser, currentUser }: MessagesContain
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
+  // Filter out any potential duplicate messages
+  const uniqueMessages = messages.filter((message, index, self) => 
+    index === self.findIndex((m) => m.id === message.id)
+  );
+  
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
-      {messages.length === 0 ? (
+      {uniqueMessages.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-full text-center p-4">
           <MessageCircle className="h-12 w-12 text-muted-foreground mb-4" />
           <h3 className="font-medium text-lg">Start the conversation</h3>
@@ -31,7 +36,7 @@ const MessagesContainer = ({ messages, otherUser, currentUser }: MessagesContain
           </p>
         </div>
       ) : (
-        messages.map((msg) => (
+        uniqueMessages.map((msg) => (
           <ConversationMessage
             key={msg.id}
             message={msg}
