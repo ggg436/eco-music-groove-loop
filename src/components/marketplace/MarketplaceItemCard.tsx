@@ -3,7 +3,7 @@ import { Package, RefreshCw, Gift, MapPin, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@clerk/clerk-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -14,7 +14,7 @@ interface MarketplaceItemProps {
 
 export default function MarketplaceItemCard({ item }: MarketplaceItemProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const getListingBadge = () => {
