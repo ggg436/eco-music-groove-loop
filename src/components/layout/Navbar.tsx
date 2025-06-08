@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { Leaf, MessageCircle, Flower, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,9 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Logo />
           <div className="hidden md:flex items-center space-x-4">
+            <div className="text-sm font-bold text-primary transition-colors hover:text-primary/80">
+              Hi
+            </div>
             <Link 
               to="/" 
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
