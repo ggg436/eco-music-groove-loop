@@ -1,44 +1,34 @@
 
 import { Input } from "@/components/ui/input";
-import { FormField } from "./FormField";
+import { Label } from "@/components/ui/label";
 
 interface PriceFieldsProps {
-  price: number | undefined;
-  originalPrice: number | undefined;
-  onPriceChange: (value: number | undefined) => void;
-  onOriginalPriceChange: (value: number | undefined) => void;
+  listingType: string;
+  price: string;
+  onPriceChange: (value: string) => void;
 }
 
 export function PriceFields({
+  listingType,
   price,
-  originalPrice,
   onPriceChange,
-  onOriginalPriceChange,
 }: PriceFieldsProps) {
+  if (listingType !== "sell") {
+    return null;
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormField id="price" label="Price">
-        <Input
-          id="price"
-          type="number"
-          value={price === undefined ? "" : price.toString()}
-          onChange={(e) => 
-            onPriceChange(e.target.value === "" ? undefined : parseFloat(e.target.value))
-          }
-          placeholder="Selling Price"
-        />
-      </FormField>
-      <FormField id="originalPrice" label="Original Price (Optional)">
-        <Input
-          id="originalPrice"
-          type="number"
-          value={originalPrice === undefined ? "" : originalPrice.toString()}
-          onChange={(e) =>
-            onOriginalPriceChange(e.target.value === "" ? undefined : parseFloat(e.target.value))
-          }
-          placeholder="Original Price"
-        />
-      </FormField>
+    <div className="grid gap-2">
+      <Label htmlFor="price">Price *</Label>
+      <Input
+        id="price"
+        type="number"
+        value={price}
+        onChange={(e) => onPriceChange(e.target.value)}
+        placeholder="Enter price"
+        step="0.01"
+        min="0"
+      />
     </div>
   );
 }

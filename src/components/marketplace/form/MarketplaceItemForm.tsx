@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ListingTypeSelector } from "./ListingTypeSelector";
-import { FormField } from "./FormField";
+import { TextInputField } from "./TextInputField";
 import { ImageUploadField } from "./ImageUploadField";
 import { PriceFields } from "./PriceFields";
 
@@ -20,7 +20,7 @@ export default function MarketplaceItemForm() {
     title: "",
     description: "",
     category: "",
-    listingType: "sell" as "sell" | "exchange" | "giveaway",
+    listingType: "Offer" as string,
     price: "",
     location: "",
     images: [] as string[]
@@ -49,7 +49,7 @@ export default function MarketplaceItemForm() {
       return;
     }
 
-    if (formData.listingType === "sell" && !formData.price) {
+    if (formData.listingType === "Offer" && !formData.price) {
       toast({
         variant: "destructive",
         title: "Price required",
@@ -68,9 +68,9 @@ export default function MarketplaceItemForm() {
           description: formData.description,
           category: formData.category || 'Miscellaneous',
           listing_type: formData.listingType,
-          price: formData.listingType === "sell" ? parseFloat(formData.price) : null,
+          price: formData.listingType === "Offer" ? parseFloat(formData.price) : null,
           location: formData.location || 'Not specified',
-          images: formData.images,
+          image_url: formData.images[0] || null,
           user_id: user.id,
         })
         .select()
@@ -88,7 +88,7 @@ export default function MarketplaceItemForm() {
         title: "",
         description: "",
         category: "",
-        listingType: "sell",
+        listingType: "Offer",
         price: "",
         location: "",
         images: []
@@ -138,14 +138,16 @@ export default function MarketplaceItemForm() {
         onChange={(value) => updateFormData('listingType', value)}
       />
 
-      <FormField
+      <TextInputField
+        id="title"
         label="Title *"
         placeholder="What are you selling/trading/giving away?"
         value={formData.title}
         onChange={(value) => updateFormData('title', value)}
       />
 
-      <FormField
+      <TextInputField
+        id="description"
         label="Description *"
         placeholder="Describe your item in detail..."
         value={formData.description}
@@ -153,7 +155,8 @@ export default function MarketplaceItemForm() {
         multiline
       />
 
-      <FormField
+      <TextInputField
+        id="category"
         label="Category"
         placeholder="e.g., Electronics, Books, Clothing..."
         value={formData.category}
@@ -166,7 +169,8 @@ export default function MarketplaceItemForm() {
         onPriceChange={(value) => updateFormData('price', value)}
       />
 
-      <FormField
+      <TextInputField
+        id="location"
         label="Location"
         placeholder="Where can buyers pick this up?"
         value={formData.location}
