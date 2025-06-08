@@ -12,10 +12,10 @@ export default function Navbar() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-6">
           <Logo />
+          <div className="text-lg font-bold text-green-600 bg-green-100 px-3 py-1 rounded-full">
+            Hi
+          </div>
           <div className="hidden md:flex items-center space-x-4">
-            <div className="text-sm font-bold text-primary transition-colors hover:text-primary/80">
-              Hi
-            </div>
             <Link 
               to="/" 
               className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
