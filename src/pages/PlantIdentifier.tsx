@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function PlantIdentifier() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
   
