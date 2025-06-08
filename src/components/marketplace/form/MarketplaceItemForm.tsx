@@ -6,10 +6,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ListingTypeSelector from "./ListingTypeSelector";
-import FormField from "./FormField";
-import ImageUploadField from "./ImageUploadField";
-import PriceFields from "./PriceFields";
+import { ListingTypeSelector } from "./ListingTypeSelector";
+import { FormField } from "./FormField";
+import { ImageUploadField } from "./ImageUploadField";
+import { PriceFields } from "./PriceFields";
 
 export default function MarketplaceItemForm() {
   const { user } = useUser();

@@ -1,7 +1,7 @@
 
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@clerk/clerk-react";
 import { Button } from "@/components/ui/button";
 import MessageSound from "@/components/chat/MessageSound";
 import ChatHeader from "@/components/chat/ChatHeader";
@@ -15,7 +15,7 @@ import { useChat } from "@/hooks/use-chat";
 export default function Chat() {
   const { conversationId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useUser();
 
   const {
     isLoading,

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@clerk/clerk-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ConversationList from "@/components/chat/ConversationList";
@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
 export default function Chats() {
-  const { user } = useAuth();
+  const { user } = useUser();
   const { toast } = useToast();
   
   const [isLoading, setIsLoading] = useState(true);
