@@ -13,7 +13,7 @@ export default function Navbar() {
         <div className="flex items-center gap-6">
           <Logo />
           <div className="hidden md:flex items-center space-x-4">
-            <div className="text-sm font-bold text-primary transition-colors hover:text-primary/80">
+            <div className="text-sm font-bold text-green-600 transition-colors hover:text-green-500">
               Hi
             </div>
             <Link 
