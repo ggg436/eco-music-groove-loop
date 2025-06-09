@@ -34,10 +34,10 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
   const [lastMessageSenderId, setLastMessageSenderId] = useState<string | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [playNotification, setPlayNotification] = useState(false);
-  const [subscriptionError, setSubscriptionError] = useState<boolean>(false);
-
-  // Use ref to track if we've already set up subscriptions
+  
   const subscriptionsSetup = useRef(false);
+  const messageChannelRef = useRef<any>(null);
+  const conversationChannelRef = useRef<any>(null);
 
   useEffect(() => {
     if (!conversationId || !userId) return;
@@ -91,26 +91,28 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
         setOtherUser(profileData);
         
         // Fetch product details
-        const { data: productData, error: productError } = await supabase
-          .from('marketplace_items')
-          .select('*')
-          .eq('id', conversationData.product_id)
-          .single();
-        
-        if (!productError && productData) {
-          setProduct({
-            id: productData.id,
-            title: productData.title,
-            description: productData.description || '',
-            price: productData.price !== null ? Number(productData.price) : null,
-            originalPrice: productData.original_price !== null ? Number(productData.original_price) : null,
-            images: [productData.image_url || 'https://images.unsplash.com/photo-1560343090-f0409e92791a'],
-            category: productData.category || 'Miscellaneous',
-            location: productData.location || 'Unknown',
-            user_id: productData.user_id,
-            image_url: productData.image_url,
-            listing_type: productData.listing_type
-          });
+        if (conversationData.product_id) {
+          const { data: productData, error: productError } = await supabase
+            .from('marketplace_items')
+            .select('*')
+            .eq('id', conversationData.product_id)
+            .single();
+          
+          if (!productError && productData) {
+            setProduct({
+              id: productData.id,
+              title: productData.title,
+              description: productData.description || '',
+              price: productData.price !== null ? Number(productData.price) : null,
+              originalPrice: productData.original_price !== null ? Number(productData.original_price) : null,
+              images: [productData.image_url || 'https://images.unsplash.com/photo-1560343090-f0409e92791a'],
+              category: productData.category || 'Miscellaneous',
+              location: productData.location || 'Unknown',
+              user_id: productData.user_id,
+              image_url: productData.image_url,
+              listing_type: productData.listing_type
+            });
+          }
         }
         
         // Fetch messages
@@ -136,7 +138,6 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
         
       } catch (error) {
         console.error('Error in fetchConversation:', error);
-        setSubscriptionError(true);
         toast({
           variant: "destructive",
           title: "Error",
@@ -149,92 +150,109 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
     
     fetchConversation();
     
-    // Only set up subscriptions once
-    if (subscriptionsSetup.current) return;
-    subscriptionsSetup.current = true;
-    
-    console.log(`Setting up real-time subscriptions for conversation ${conversationId}`);
-    
-    // Subscribe to new messages with a unique channel ID
-    const messageChannel = supabase
-      .channel(`messages-${conversationId}-${userId}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log('New message received via realtime:', payload);
-          
-          if (!payload.new) {
-            console.error('Message payload is missing the new property:', payload);
-            return;
-          }
-          
-          const newMessage = payload.new as any;
-          const transformedMessage = transformMessage(newMessage);
-          
-          if (newMessage.sender_id !== userId) {
-            console.log('Playing notification for message from:', newMessage.sender_id);
-            setPlayNotification(true);
-          }
-          
-          setLastMessageSenderId(newMessage.sender_id);
-          
-          setMessages((currentMessages) => {
-            // Check if the message already exists to prevent duplicates
-            if (isDuplicateMessage(transformedMessage, currentMessages)) {
-              console.log(`Message ${transformedMessage.id} already exists, not adding`);
-              return currentMessages;
+    // Set up real-time subscriptions
+    if (!subscriptionsSetup.current) {
+      subscriptionsSetup.current = true;
+      
+      console.log(`Setting up real-time subscriptions for conversation ${conversationId}`);
+      
+      // Clean up existing subscriptions
+      if (messageChannelRef.current) {
+        supabase.removeChannel(messageChannelRef.current);
+      }
+      if (conversationChannelRef.current) {
+        supabase.removeChannel(conversationChannelRef.current);
+      }
+      
+      // Subscribe to new messages
+      messageChannelRef.current = supabase
+        .channel(`messages-${conversationId}-${userId}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            console.log('New message received via realtime:', payload);
+            
+            if (!payload.new) {
+              console.error('Message payload is missing the new property:', payload);
+              return;
             }
-            console.log(`Adding new message ${transformedMessage.id} to state`);
-            return [...currentMessages, transformedMessage];
-          });
-        }
-      )
-      .subscribe((status) => {
-        console.log(`Message subscription status:`, status);
-        
-        if (status === 'SUBSCRIBED') {
-          console.log(`Successfully subscribed to messages for conversation ${conversationId}`);
-          setSubscriptionError(false);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`Error subscribing to messages for conversation ${conversationId}`);
-          setSubscriptionError(true);
-          toast({
-            variant: "destructive",
-            title: "Connection Error",
-            description: "Unable to receive real-time messages. Please refresh the page.",
-          });
-        }
-      });
-    
-    // Subscribe to conversation updates
-    const conversationChannel = supabase
-      .channel(`conversation-${conversationId}-${userId}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'conversations',
-          filter: `id=eq.${conversationId}`,
-        },
-        (payload) => {
-          console.log('Conversation updated:', payload);
-          setConversation(payload.new as Conversation);
-        }
-      )
-      .subscribe();
+            
+            const newMessage = payload.new as any;
+            const transformedMessage = transformMessage(newMessage);
+            
+            // Only play notification for messages from other users
+            if (newMessage.sender_id !== userId) {
+              console.log('Playing notification for message from:', newMessage.sender_id);
+              setPlayNotification(true);
+            }
+            
+            setLastMessageSenderId(newMessage.sender_id);
+            
+            setMessages((currentMessages) => {
+              // Check if the message already exists to prevent duplicates
+              if (isDuplicateMessage(transformedMessage, currentMessages)) {
+                console.log(`Message ${transformedMessage.id} already exists, not adding`);
+                return currentMessages;
+              }
+              console.log(`Adding new message ${transformedMessage.id} to state`);
+              return [...currentMessages, transformedMessage];
+            });
+          }
+        )
+        .subscribe((status) => {
+          console.log(`Message subscription status:`, status);
+          
+          if (status === 'SUBSCRIBED') {
+            console.log(`Successfully subscribed to messages for conversation ${conversationId}`);
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error(`Error subscribing to messages for conversation ${conversationId}`);
+            toast({
+              variant: "destructive",
+              title: "Connection Error",
+              description: "Unable to receive real-time messages. Please refresh the page.",
+            });
+          }
+        });
+      
+      // Subscribe to conversation updates
+      conversationChannelRef.current = supabase
+        .channel(`conversation-${conversationId}-${userId}-${Date.now()}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'conversations',
+            filter: `id=eq.${conversationId}`,
+          },
+          (payload) => {
+            console.log('Conversation updated:', payload);
+            setConversation(payload.new as Conversation);
+          }
+        )
+        .subscribe((status) => {
+          console.log(`Conversation subscription status:`, status);
+        });
+    }
     
     return () => {
       console.log('Cleaning up subscription channels');
       subscriptionsSetup.current = false;
-      supabase.removeChannel(messageChannel);
-      supabase.removeChannel(conversationChannel);
+      
+      if (messageChannelRef.current) {
+        supabase.removeChannel(messageChannelRef.current);
+        messageChannelRef.current = null;
+      }
+      if (conversationChannelRef.current) {
+        supabase.removeChannel(conversationChannelRef.current);
+        conversationChannelRef.current = null;
+      }
     };
   }, [conversationId, userId, toast]);
 

@@ -31,13 +31,9 @@ export default function Chats() {
       setError(false);
       console.log('Fetching conversations for user:', user.id);
       
-      // Modified query to NOT use the dot notation which was causing the foreign key error
       const { data, error } = await supabase
         .from('conversations')
-        .select(`
-          *,
-          product_id
-        `)
+        .select('*')
         .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
         .order('updated_at', { ascending: false });
       
@@ -55,6 +51,7 @@ export default function Chats() {
         const otherUserId = conv.buyer_id === user.id ? conv.seller_id : conv.buyer_id;
         
         try {
+          // Fetch other user profile
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
@@ -63,9 +60,10 @@ export default function Chats() {
           
           if (profileError) {
             console.error('Error fetching profile for user:', otherUserId, profileError);
-            continue; // Skip this conversation but don't fail the whole process
+            continue;
           }
           
+          // Fetch latest message
           const { data: latestMessageData, error: messageError } = await supabase
             .from('messages')
             .select('*')
@@ -93,7 +91,7 @@ export default function Chats() {
             };
           }
           
-          // Get product information separately since dot notation was causing issues
+          // Fetch product information
           let product: MarketplaceItem | null = null;
           
           if (conv.product_id) {
@@ -124,7 +122,6 @@ export default function Chats() {
           });
         } catch (err) {
           console.error('Error processing conversation details:', err);
-          // Continue with other conversations
         }
       }
       
@@ -149,6 +146,7 @@ export default function Chats() {
     
     fetchConversations();
     
+    // Set up real-time subscriptions with unique channel names
     const channelName = `user-messages-${user.id}-${Date.now()}`;
     
     const messagesChannel = supabase
@@ -166,11 +164,13 @@ export default function Chats() {
           if (payload.new) {
             const messageData = payload.new as any;
             
+            // Only play notification for messages from other users
             if (messageData.sender_id !== user.id) {
               console.log('Playing notification for new message');
               setPlayNotification(true);
             }
             
+            // Refresh conversations to update latest message
             fetchConversations();
           }
         }
@@ -201,13 +201,8 @@ export default function Chats() {
         console.log(`Conversation subscription status: ${status}`);
       });
     
-    const intervalId = setInterval(() => {
-      console.log('Periodic refresh of conversations');
-      fetchConversations();
-    }, 60000);
-    
     return () => {
-      clearInterval(intervalId);
+      console.log('Cleaning up subscription channels');
       supabase.removeChannel(messagesChannel);
       supabase.removeChannel(conversationsChannel);
     };
