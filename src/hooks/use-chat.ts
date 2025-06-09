@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { transformMessage, isDuplicateMessage } from "@/components/chat/utils/messageUtils";
@@ -36,12 +36,16 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
   const [playNotification, setPlayNotification] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<boolean>(false);
 
+  // Use ref to track if we've already set up subscriptions
+  const subscriptionsSetup = useRef(false);
+
   useEffect(() => {
     if (!conversationId || !userId) return;
     
     const fetchConversation = async () => {
       try {
         setIsLoading(true);
+        console.log(`Fetching conversation ${conversationId} for user ${userId}`);
         
         const { data: conversationData, error: conversationError } = await supabase
           .from('conversations')
@@ -71,6 +75,8 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
           ? conversationData.buyer_id 
           : conversationData.seller_id;
         
+        console.log(`Fetching profile for other user: ${otherUserId}`);
+        
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -84,6 +90,7 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
         
         setOtherUser(profileData);
         
+        // Fetch product details
         const { data: productData, error: productError } = await supabase
           .from('marketplace_items')
           .select('*')
@@ -104,11 +111,9 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
             image_url: productData.image_url,
             listing_type: productData.listing_type
           });
-        } else if (productError) {
-          console.error('Error fetching product:', productError);
-          // Don't throw here, just log the error as the product might have been deleted
         }
         
+        // Fetch messages
         const { data: messagesData, error: messagesError } = await supabase
           .from('messages')
           .select('*')
@@ -144,13 +149,15 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
     
     fetchConversation();
     
-    // Create a truly unique channel ID for this user and conversation
-    const uniqueChannelId = `chat-messages-${conversationId}-${userId}-${Date.now()}`;
-    console.log(`Creating channel: ${uniqueChannelId} for conversation ${conversationId}`);
+    // Only set up subscriptions once
+    if (subscriptionsSetup.current) return;
+    subscriptionsSetup.current = true;
     
-    // Subscribe to new messages
+    console.log(`Setting up real-time subscriptions for conversation ${conversationId}`);
+    
+    // Subscribe to new messages with a unique channel ID
     const messageChannel = supabase
-      .channel(uniqueChannelId)
+      .channel(`messages-${conversationId}-${userId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -189,7 +196,7 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
         }
       )
       .subscribe((status) => {
-        console.log(`Subscription status for channel ${uniqueChannelId}:`, status);
+        console.log(`Message subscription status:`, status);
         
         if (status === 'SUBSCRIBED') {
           console.log(`Successfully subscribed to messages for conversation ${conversationId}`);
@@ -206,10 +213,8 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
       });
     
     // Subscribe to conversation updates
-    const conversationChannelId = `chat-updates-${conversationId}-${userId}-${Date.now()}`;
-    
     const conversationChannel = supabase
-      .channel(conversationChannelId)
+      .channel(`conversation-${conversationId}-${userId}-${Date.now()}`)
       .on(
         'postgres_changes',
         {
@@ -223,25 +228,15 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
           setConversation(payload.new as Conversation);
         }
       )
-      .subscribe((status) => {
-        console.log(`Conversation channel status: ${status}`);
-      });
-    
-    // Check if we are connected periodically
-    const intervalId = setInterval(() => {
-      if (subscriptionError) {
-        console.log('Trying to reconnect...');
-        fetchConversation();
-      }
-    }, 30000); // Try to reconnect every 30 seconds if there's an error
+      .subscribe();
     
     return () => {
       console.log('Cleaning up subscription channels');
-      clearInterval(intervalId);
+      subscriptionsSetup.current = false;
       supabase.removeChannel(messageChannel);
       supabase.removeChannel(conversationChannel);
     };
-  }, [conversationId, userId, toast, subscriptionError]);
+  }, [conversationId, userId, toast]);
 
   const handleLocationSelected = (location: { lat: number; lng: number; address: string }) => {
     if (!userId || !conversationId) return;
@@ -251,6 +246,8 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
       longitude: location.lng,
       address: location.address,
     };
+    
+    console.log('Sending location message:', locationData);
     
     supabase
       .from('messages')
@@ -268,6 +265,8 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
             title: "Error",
             description: "Failed to send location",
           });
+        } else {
+          console.log('Location message sent successfully');
         }
         
         setShowLocationPicker(false);

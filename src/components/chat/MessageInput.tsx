@@ -37,6 +37,8 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
       let attachmentUrl = null;
       let attachmentType = null;
       
+      console.log('Sending message:', { conversationId, userId, hasAttachment: !!attachment.file });
+      
       if (attachment.file) {
         const fileExt = attachment.file.name.split('.').pop();
         const filePath = `conversations/${conversationId}/${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -55,8 +57,6 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
         attachmentType = attachment.type;
       }
       
-      console.log('Sending message to conversation:', conversationId);
-      
       const { error: messageError } = await supabase
         .from('messages')
         .insert({
@@ -67,8 +67,12 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
           attachment_type: attachmentType,
         });
       
-      if (messageError) throw messageError;
+      if (messageError) {
+        console.error('Error inserting message:', messageError);
+        throw messageError;
+      }
       
+      // Update conversation timestamp
       const { error: updateError } = await supabase
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })

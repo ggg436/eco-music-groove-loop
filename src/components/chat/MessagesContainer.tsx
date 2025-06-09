@@ -20,10 +20,14 @@ const MessagesContainer = ({ messages, otherUser, currentUser }: MessagesContain
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
-  // Filter out any potential duplicate messages
-  const uniqueMessages = messages.filter((message, index, self) => 
-    index === self.findIndex((m) => m.id === message.id)
-  );
+  // Filter out any potential duplicate messages and ensure proper sorting
+  const uniqueMessages = messages
+    .filter((message, index, self) => 
+      index === self.findIndex((m) => m.id === message.id)
+    )
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  
+  console.log(`Rendering ${uniqueMessages.length} unique messages in MessagesContainer`);
   
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
