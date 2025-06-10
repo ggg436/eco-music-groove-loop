@@ -28,6 +28,7 @@ export default function Chat() {
     handleLocationSelected,
     playNotification,
     setPlayNotification,
+    isConnected,
   } = useChat({
     conversationId,
     userId: user?.id,
@@ -109,6 +110,7 @@ export default function Chat() {
           <MessageInput 
             conversationId={conversationId as string}
             userId={user.id}
+            isConnected={isConnected}
           />
         </div>
       </div>

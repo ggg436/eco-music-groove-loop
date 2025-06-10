@@ -21,6 +21,7 @@ interface UseChatResult {
   handleLocationSelected: (location: { lat: number; lng: number; address: string }) => void;
   playNotification: boolean;
   setPlayNotification: (play: boolean) => void;
+  isConnected: boolean;
 }
 
 export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult => {
@@ -34,13 +35,128 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
   const [lastMessageSenderId, setLastMessageSenderId] = useState<string | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [playNotification, setPlayNotification] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   
   const subscriptionsSetup = useRef(false);
   const messageChannelRef = useRef<any>(null);
   const conversationChannelRef = useRef<any>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const cleanup = () => {
+    console.log('Cleaning up chat subscriptions');
+    subscriptionsSetup.current = false;
+    
+    if (messageChannelRef.current) {
+      supabase.removeChannel(messageChannelRef.current);
+      messageChannelRef.current = null;
+    }
+    if (conversationChannelRef.current) {
+      supabase.removeChannel(conversationChannelRef.current);
+      conversationChannelRef.current = null;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    setIsConnected(false);
+  };
+
+  const setupRealtimeSubscriptions = () => {
+    if (!conversationId || !userId || subscriptionsSetup.current) return;
+    
+    console.log(`Setting up real-time subscriptions for conversation ${conversationId}`);
+    subscriptionsSetup.current = true;
+    
+    // Clean up existing subscriptions
+    cleanup();
+    
+    // Subscribe to new messages
+    messageChannelRef.current = supabase
+      .channel(`messages-${conversationId}-${userId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('New message received via realtime:', payload);
+          
+          if (!payload.new) {
+            console.error('Message payload is missing the new property:', payload);
+            return;
+          }
+          
+          const newMessage = payload.new as any;
+          const transformedMessage = transformMessage(newMessage);
+          
+          // Only play notification for messages from other users
+          if (newMessage.sender_id !== userId) {
+            console.log('Playing notification for message from:', newMessage.sender_id);
+            setPlayNotification(true);
+          }
+          
+          setLastMessageSenderId(newMessage.sender_id);
+          
+          setMessages((currentMessages) => {
+            // Check if the message already exists to prevent duplicates
+            if (isDuplicateMessage(transformedMessage, currentMessages)) {
+              console.log(`Message ${transformedMessage.id} already exists, not adding`);
+              return currentMessages;
+            }
+            console.log(`Adding new message ${transformedMessage.id} to state`);
+            return [...currentMessages, transformedMessage];
+          });
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Message subscription status:`, status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log(`Successfully subscribed to messages for conversation ${conversationId}`);
+          setIsConnected(true);
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`Error subscribing to messages for conversation ${conversationId}`);
+          setIsConnected(false);
+          
+          // Retry connection after 3 seconds
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log('Retrying message subscription...');
+            setupRealtimeSubscriptions();
+          }, 3000);
+        } else if (status === 'CLOSED') {
+          setIsConnected(false);
+        }
+      });
+    
+    // Subscribe to conversation updates
+    conversationChannelRef.current = supabase
+      .channel(`conversation-${conversationId}-${userId}-${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+          filter: `id=eq.${conversationId}`,
+        },
+        (payload) => {
+          console.log('Conversation updated:', payload);
+          setConversation(payload.new as Conversation);
+        }
+      )
+      .subscribe((status) => {
+        console.log(`Conversation subscription status:`, status);
+      });
+  };
 
   useEffect(() => {
-    if (!conversationId || !userId) return;
+    if (!conversationId || !userId) {
+      cleanup();
+      return;
+    }
     
     const fetchConversation = async () => {
       try {
@@ -136,6 +252,9 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
           setLastMessageSenderId(transformedMessages[transformedMessages.length - 1].sender_id);
         }
         
+        // Set up real-time subscriptions after data is loaded
+        setupRealtimeSubscriptions();
+        
       } catch (error) {
         console.error('Error in fetchConversation:', error);
         toast({
@@ -150,113 +269,10 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
     
     fetchConversation();
     
-    // Set up real-time subscriptions
-    if (!subscriptionsSetup.current) {
-      subscriptionsSetup.current = true;
-      
-      console.log(`Setting up real-time subscriptions for conversation ${conversationId}`);
-      
-      // Clean up existing subscriptions
-      if (messageChannelRef.current) {
-        supabase.removeChannel(messageChannelRef.current);
-      }
-      if (conversationChannelRef.current) {
-        supabase.removeChannel(conversationChannelRef.current);
-      }
-      
-      // Subscribe to new messages
-      messageChannelRef.current = supabase
-        .channel(`messages-${conversationId}-${userId}-${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `conversation_id=eq.${conversationId}`,
-          },
-          (payload) => {
-            console.log('New message received via realtime:', payload);
-            
-            if (!payload.new) {
-              console.error('Message payload is missing the new property:', payload);
-              return;
-            }
-            
-            const newMessage = payload.new as any;
-            const transformedMessage = transformMessage(newMessage);
-            
-            // Only play notification for messages from other users
-            if (newMessage.sender_id !== userId) {
-              console.log('Playing notification for message from:', newMessage.sender_id);
-              setPlayNotification(true);
-            }
-            
-            setLastMessageSenderId(newMessage.sender_id);
-            
-            setMessages((currentMessages) => {
-              // Check if the message already exists to prevent duplicates
-              if (isDuplicateMessage(transformedMessage, currentMessages)) {
-                console.log(`Message ${transformedMessage.id} already exists, not adding`);
-                return currentMessages;
-              }
-              console.log(`Adding new message ${transformedMessage.id} to state`);
-              return [...currentMessages, transformedMessage];
-            });
-          }
-        )
-        .subscribe((status) => {
-          console.log(`Message subscription status:`, status);
-          
-          if (status === 'SUBSCRIBED') {
-            console.log(`Successfully subscribed to messages for conversation ${conversationId}`);
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error(`Error subscribing to messages for conversation ${conversationId}`);
-            toast({
-              variant: "destructive",
-              title: "Connection Error",
-              description: "Unable to receive real-time messages. Please refresh the page.",
-            });
-          }
-        });
-      
-      // Subscribe to conversation updates
-      conversationChannelRef.current = supabase
-        .channel(`conversation-${conversationId}-${userId}-${Date.now()}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'conversations',
-            filter: `id=eq.${conversationId}`,
-          },
-          (payload) => {
-            console.log('Conversation updated:', payload);
-            setConversation(payload.new as Conversation);
-          }
-        )
-        .subscribe((status) => {
-          console.log(`Conversation subscription status:`, status);
-        });
-    }
-    
-    return () => {
-      console.log('Cleaning up subscription channels');
-      subscriptionsSetup.current = false;
-      
-      if (messageChannelRef.current) {
-        supabase.removeChannel(messageChannelRef.current);
-        messageChannelRef.current = null;
-      }
-      if (conversationChannelRef.current) {
-        supabase.removeChannel(conversationChannelRef.current);
-        conversationChannelRef.current = null;
-      }
-    };
+    return cleanup;
   }, [conversationId, userId, toast]);
 
-  const handleLocationSelected = (location: { lat: number; lng: number; address: string }) => {
+  const handleLocationSelected = async (location: { lat: number; lng: number; address: string }) => {
     if (!userId || !conversationId) return;
     
     const locationData = {
@@ -267,28 +283,42 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
     
     console.log('Sending location message:', locationData);
     
-    supabase
-      .from('messages')
-      .insert({
-        conversation_id: conversationId,
-        sender_id: userId,
-        content: location.address,
-        location: locationData,
-      })
-      .then(({ error }) => {
-        if (error) {
-          console.error('Error sending location:', error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to send location",
-          });
-        } else {
-          console.log('Location message sent successfully');
-        }
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: userId,
+          content: location.address,
+          location: locationData,
+        });
         
-        setShowLocationPicker(false);
+      if (error) {
+        console.error('Error sending location:', error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to send location",
+        });
+      } else {
+        console.log('Location message sent successfully');
+        
+        // Update conversation timestamp
+        await supabase
+          .from('conversations')
+          .update({ updated_at: new Date().toISOString() })
+          .eq('id', conversationId);
+      }
+    } catch (error) {
+      console.error('Error in handleLocationSelected:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to send location",
       });
+    }
+    
+    setShowLocationPicker(false);
   };
 
   return {
@@ -303,5 +333,6 @@ export const useChat = ({ conversationId, userId }: UseChatProps): UseChatResult
     handleLocationSelected,
     playNotification,
     setPlayNotification,
+    isConnected,
   };
 };

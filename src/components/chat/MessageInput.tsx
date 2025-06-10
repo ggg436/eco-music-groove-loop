@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Image, Send, MapPin } from "lucide-react";
+import { Image, Send, MapPin, Wifi, WifiOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import AttachmentPreview from "./AttachmentPreview";
@@ -10,9 +10,10 @@ import AttachmentPreview from "./AttachmentPreview";
 interface MessageInputProps {
   conversationId: string;
   userId: string;
+  isConnected?: boolean;
 }
 
-const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
+const MessageInput = ({ conversationId, userId, isConnected = true }: MessageInputProps) => {
   const { toast } = useToast();
   const [message, setMessage] = useState("");
   const [showLocationPicker, setShowLocationPicker] = useState(false);
@@ -28,6 +29,7 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
   });
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSendMessage = async () => {
     if ((!message.trim() && !attachment.file) || !userId || !conversationId || isSending) return;
@@ -37,9 +39,16 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
       let attachmentUrl = null;
       let attachmentType = null;
       
-      console.log('Sending message:', { conversationId, userId, hasAttachment: !!attachment.file });
+      console.log('Sending message:', { 
+        conversationId, 
+        userId, 
+        hasAttachment: !!attachment.file,
+        messageLength: message.trim().length 
+      });
       
       if (attachment.file) {
+        console.log('Uploading attachment:', attachment.file.name);
+        
         const fileExt = attachment.file.name.split('.').pop();
         const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
         const filePath = `conversations/${conversationId}/${fileName}`;
@@ -59,6 +68,7 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
         
         attachmentUrl = publicUrl;
         attachmentType = attachment.type;
+        console.log('Attachment uploaded successfully:', attachmentUrl);
       }
       
       const messageData = {
@@ -94,6 +104,9 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
       console.log('Message sent successfully');
       setMessage("");
       setAttachment({ file: null, previewUrl: null, type: null });
+      
+      // Focus back to textarea
+      textareaRef.current?.focus();
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -166,14 +179,32 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
       )}
       
       <div className="p-3 border-t">
+        {/* Connection status indicator */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center text-xs text-muted-foreground">
+            {isConnected ? (
+              <>
+                <Wifi className="h-3 w-3 mr-1 text-green-500" />
+                <span>Connected</span>
+              </>
+            ) : (
+              <>
+                <WifiOff className="h-3 w-3 mr-1 text-red-500" />
+                <span>Connecting...</span>
+              </>
+            )}
+          </div>
+        </div>
+        
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <Textarea
+              ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="Type your message..."
               className="min-h-[60px] resize-none"
-              disabled={isSending}
+              disabled={isSending || !isConnected}
               onKeyDown={handleKeyDown}
             />
           </div>
@@ -184,7 +215,7 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
               variant="outline"
               size="icon"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isSending}
+              disabled={isSending || !isConnected}
               title="Attach file"
             >
               <Image className="h-5 w-5" />
@@ -196,7 +227,7 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
               className="hidden"
               accept="image/*,.pdf,.doc,.docx,.txt"
               onChange={handleFileChange}
-              disabled={isSending}
+              disabled={isSending || !isConnected}
             />
             
             <Button
@@ -204,7 +235,7 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
               variant="outline"
               size="icon"
               onClick={() => setShowLocationPicker(true)}
-              disabled={isSending}
+              disabled={isSending || !isConnected}
               title="Share location"
             >
               <MapPin className="h-5 w-5" />
@@ -213,7 +244,7 @@ const MessageInput = ({ conversationId, userId }: MessageInputProps) => {
             <Button
               type="button"
               onClick={handleSendMessage}
-              disabled={(!message.trim() && !attachment.file) || isSending}
+              disabled={(!message.trim() && !attachment.file) || isSending || !isConnected}
               className="min-w-[80px]"
             >
               {isSending ? (
